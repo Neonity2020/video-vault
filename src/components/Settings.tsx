@@ -11,7 +11,7 @@ const PROVIDER_PRESETS = {
     gemini: {
         label: '✨ Google Gemini（免费）',
         endpoint: 'https://generativelanguage.googleapis.com/v1beta',
-        model: 'gemini-2.5-flash-preview-05-20',
+        model: 'gemini-2.5-flash',
         keyPlaceholder: 'AIza...',
         keyUrl: 'https://aistudio.google.com/apikey',
     },
@@ -142,7 +142,7 @@ export default function Settings({ settings, onSave, saving }: SettingsProps) {
                     <p><strong>Gemini（推荐 · 免费）</strong></p>
                     <ul style={{ paddingLeft: 20, marginBottom: 12 }}>
                         <li>前往 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Google AI Studio</a> 获取免费 API Key</li>
-                        <li>推荐模型: <code style={codeStyle}>gemini-2.0-flash</code>（快速）或 <code style={codeStyle}>gemini-2.5-flash-preview-05-20</code>（高质量）</li>
+                        <li>推荐模型: <code style={codeStyle}>gemini-2.5-flash</code>（快速）或 <code style={codeStyle}>gemini-3.0-pro</code>（高质量）</li>
                     </ul>
                     <p><strong>OpenAI 兼容</strong></p>
                     <ul style={{ paddingLeft: 20 }}>

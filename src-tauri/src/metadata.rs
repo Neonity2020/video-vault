@@ -1,3 +1,4 @@
+use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
@@ -7,6 +8,52 @@ pub struct VideoMetadata {
     pub thumbnail: String,
     pub description: String,
     pub duration: String,
+}
+
+/// Download an image from a URL and return it as a base64 data URL.
+/// This bypasses anti-hotlinking (no Referer sent) and CSP http restrictions.
+async fn download_image_as_data_url(url: &str) -> Result<String, String> {
+    // Ensure https
+    let url = if url.starts_with("http://") {
+        url.replacen("http://", "https://", 1)
+    } else {
+        url.to_string()
+    };
+
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    let resp = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Image download failed: {}", e))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("Image download returned status: {}", resp.status()));
+    }
+
+    // Detect MIME type from Content-Type header, fallback to image/jpeg
+    let mime = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("image/jpeg")
+        .split(';')
+        .next()
+        .unwrap_or("image/jpeg")
+        .trim()
+        .to_string();
+
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read image bytes: {}", e))?;
+
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    Ok(format!("data:{};base64,{}", mime, b64))
 }
 
 /// Fetch metadata from YouTube using the oEmbed API (no API key required)
@@ -92,10 +139,18 @@ async fn fetch_bilibili_metadata(url: &str) -> Result<VideoMetadata, String> {
         String::new()
     };
 
+    // Download thumbnail and convert to base64 data URL to bypass anti-hotlinking
+    let thumbnail_url = data["pic"].as_str().unwrap_or("");
+    let thumbnail = if !thumbnail_url.is_empty() {
+        download_image_as_data_url(thumbnail_url).await.unwrap_or_default()
+    } else {
+        String::new()
+    };
+
     Ok(VideoMetadata {
         title: data["title"].as_str().unwrap_or("").to_string(),
         author: data["owner"]["name"].as_str().unwrap_or("").to_string(),
-        thumbnail: data["pic"].as_str().unwrap_or("").to_string(),
+        thumbnail,
         description: data["desc"].as_str().unwrap_or("").to_string(),
         duration: duration_str,
     })

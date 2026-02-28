@@ -44,7 +44,7 @@ impl Default for AppSettings {
             api_provider: "gemini".to_string(),
             api_endpoint: "https://generativelanguage.googleapis.com/v1beta".to_string(),
             api_key: String::new(),
-            model: "gemini-2.5-flash-preview-05-20".to_string(),
+            model: "gemini-2.5-flash".to_string(),
         }
     }
 }
