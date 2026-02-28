@@ -139,6 +139,16 @@ async fn fetch_bilibili_metadata(url: &str) -> Result<VideoMetadata, String> {
         String::new()
     };
 
+    // Bilibili API often returns an `http://` thumbnail URL which is blocked by
+    // our content security policy (only `https:` is allowed). Convert it and
+    // also handle protocol-relative URLs (`//...`) by prefixing `https:`.
+    let mut thumbnail = data["pic"].as_str().unwrap_or("").to_string();
+    if thumbnail.starts_with("http://") {
+        thumbnail = thumbnail.replacen("http://", "https://", 1);
+    } else if thumbnail.starts_with("//") {
+        thumbnail = format!("https:{}", thumbnail);
+    }
+
     // Download thumbnail and convert to base64 data URL to bypass anti-hotlinking
     let thumbnail_url = data["pic"].as_str().unwrap_or("");
     let thumbnail = if !thumbnail_url.is_empty() {
@@ -151,13 +161,18 @@ async fn fetch_bilibili_metadata(url: &str) -> Result<VideoMetadata, String> {
         title: data["title"].as_str().unwrap_or("").to_string(),
         author: data["owner"]["name"].as_str().unwrap_or("").to_string(),
         thumbnail,
+        thumbnail,
         description: data["desc"].as_str().unwrap_or("").to_string(),
         duration: duration_str,
     })
 }
 
 fn extract_bvid(url: &str) -> Option<String> {
-    if let Some(start) = url.find("BV") {
+    // Search for the "BV" identifier case-insensitively since some URLs
+    // may use lowercase. We still want to return the correctly-cased id.
+    let url_upper = url.to_uppercase();
+    if let Some(start) = url_upper.find("BV") {
+        // start is index into the uppercased string; map it back to original
         let candidate = &url[start..];
         // BV ids are 12 chars: "BV" + 10 alphanumeric
         if candidate.len() >= 12 {
