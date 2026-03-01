@@ -1,8 +1,13 @@
+import { forwardRef, useImperativeHandle, useRef } from "react";
 import { Video } from "../types";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 interface VideoPlayerProps {
   video: Video;
+}
+
+export interface VideoPlayerRef {
+  seekTo: (seconds: number) => void;
 }
 
 function getYouTubeVideoId(url: string): string | null {
@@ -11,8 +16,6 @@ function getYouTubeVideoId(url: string): string | null {
   );
   return match ? match[1] : null;
 }
-
-
 
 function OpenInBrowserButton({ url, label }: { url: string; label?: string }) {
   const handleOpen = async () => {
@@ -29,13 +32,32 @@ function OpenInBrowserButton({ url, label }: { url: string; label?: string }) {
   );
 }
 
-export default function VideoPlayer({ video }: VideoPlayerProps) {
+const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(({ video }, ref) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    seekTo: (seconds: number) => {
+      if (video.video_type === "youtube" && video.url) {
+        const videoId = getYouTubeVideoId(video.url);
+        const url = `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(seconds)}s`;
+        openUrl(url).catch(() => window.open(url, "_blank"));
+      } else if (video.video_type === "bilibili" && video.url) {
+        const separator = video.url.includes("?") ? "&" : "?";
+        const url = `${video.url}${separator}t=${Math.floor(seconds)}`;
+        openUrl(url).catch(() => window.open(url, "_blank"));
+      } else if (video.video_type === "local" && videoRef.current) {
+        videoRef.current.currentTime = seconds;
+        videoRef.current.play().catch(() => {});
+      }
+    }
+  }));
+
   // === LOCAL VIDEO ===
   if (video.video_type === "local") {
     if (video.file_path) {
       return (
         <div className="detail-player">
-          <video controls src={`asset://localhost/${video.file_path}`}>
+          <video ref={videoRef} controls src={`asset://localhost/${video.file_path}`}>
             Your browser does not support the video tag.
           </video>
         </div>
@@ -152,4 +174,6 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
       </div>
     </div>
   );
-}
+});
+
+export default VideoPlayer;

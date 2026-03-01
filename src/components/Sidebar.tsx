@@ -5,11 +5,14 @@ interface SidebarProps {
     onNavigate: (view: string) => void;
     authors: string[];
     topics: string[];
+    allTags: string[];
     videoCount: number;
     onFilterAuthor: (author: string) => void;
     onFilterTopic: (topic: string) => void;
+    onFilterTag: (tag: string) => void;
     activeAuthor: string;
     activeTopic: string;
+    activeTag: string;
 }
 
 export default function Sidebar({
@@ -17,11 +20,14 @@ export default function Sidebar({
     onNavigate,
     authors,
     topics,
+    allTags,
     videoCount,
     onFilterAuthor,
     onFilterTopic,
+    onFilterTag,
     activeAuthor,
     activeTopic,
+    activeTag,
 }: SidebarProps) {
     return (
         <aside className="sidebar">
@@ -89,10 +95,26 @@ export default function Sidebar({
                             <div
                                 key={topic}
                                 className={`nav-item ${activeTopic === topic ? 'active' : ''}`}
-                                onClick={() => { onFilterTopic(topic === activeTopic ? '' : topic); onFilterAuthor(''); onNavigate('all'); }}
+                                onClick={() => { onFilterTopic(topic === activeTopic ? '' : topic); onFilterAuthor(''); onFilterTag(''); onNavigate('all'); }}
                             >
                                 <span className="icon">📂</span>
                                 <span className="truncate">{topic}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {allTags.length > 0 && (
+                    <div className="nav-section">
+                        <div className="nav-section-title">标签 ({allTags.length})</div>
+                        {allTags.map((tag) => (
+                            <div
+                                key={tag}
+                                className={`nav-item ${activeTag === tag ? 'active' : ''}`}
+                                onClick={() => { onFilterTag(tag === activeTag ? '' : tag); onFilterAuthor(''); onFilterTopic(''); onNavigate('all'); }}
+                            >
+                                <span className="icon">🏷️</span>
+                                <span className="truncate">{tag}</span>
                             </div>
                         ))}
                     </div>

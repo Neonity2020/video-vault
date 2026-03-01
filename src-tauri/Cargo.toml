@@ -23,3 +23,4 @@ tokio = { version = "1", features = ["full"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 regex = "1.12.3"
 base64 = "0.22"
+yt-transcript-rs = "0.1.8"

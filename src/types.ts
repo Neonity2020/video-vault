@@ -5,15 +5,20 @@ export interface Video {
   file_path?: string;
   url?: string;
   author: string;
+  author_url: string;
   topic: string;
   description: string;
   duration: string;
   thumbnail: string;
   ai_summary: string;
+  ai_summary_en: string;
+  transcript: string;
+  timestamps: string;
   rating: number;
   is_watched: number;
   created_at?: string;
   updated_at?: string;
+  tags: string[];
 }
 
 export interface VideoFilter {
@@ -22,6 +27,7 @@ export interface VideoFilter {
   topic?: string;
   video_type?: string;
   is_watched?: number;
+  tags?: string[];
 }
 
 export interface AppSettings {
@@ -37,13 +43,18 @@ export const DEFAULT_VIDEO: Video = {
   file_path: '',
   url: '',
   author: '',
+  author_url: '',
   topic: '',
   description: '',
   duration: '',
   thumbnail: '',
   ai_summary: '',
+  ai_summary_en: '',
+  transcript: '',
+  timestamps: '',
   rating: 0,
   is_watched: 0,
+  tags: [],
 };
 
 export const VIDEO_TYPE_LABELS: Record<string, string> = {

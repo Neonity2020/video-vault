@@ -627,6 +627,18 @@ body,
   background: rgba(59, 130, 246, 0.08);
 }
 
+.video-card-meta .meta-tag.author-link {
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.video-card-meta .meta-tag.author-link:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
 .video-card-meta .meta-tag.topic {
   color: var(--accent-3);
   border-color: rgba(6, 182, 212, 0.2);
@@ -1302,4 +1314,115 @@ body,
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ===== TAGS ===== */
+.video-card-meta .meta-tag.tag {
+  color: var(--accent-1);
+  border-color: rgba(124, 58, 237, 0.2);
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.tag-input-area {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-glass);
+  transition: all var(--transition-fast);
+  min-height: 42px;
+}
+
+.tag-input-area:focus-within {
+  border-color: var(--accent-1);
+  background: var(--bg-glass-hover);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  background: linear-gradient(
+    135deg,
+    rgba(124, 58, 237, 0.15),
+    rgba(59, 130, 246, 0.1)
+  );
+  color: var(--text-accent);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  white-space: nowrap;
+  animation: fadeIn 200ms ease;
+}
+
+.tag-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  transition: all var(--transition-fast);
+}
+
+.tag-chip-remove:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: var(--danger);
+}
+
+.tag-input {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.tag-input::placeholder {
+  color: var(--text-muted);
+}
+
+.tag-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  max-height: 200px;
+  overflow-y: auto;
+  animation: fadeIn 150ms ease;
+}
+
+.tag-suggestion-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tag-suggestion-item:hover {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--text-accent);
 }

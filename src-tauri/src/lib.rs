@@ -35,6 +35,11 @@ pub fn run() {
             commands::summarize_video,
             commands::translate_summary,
             commands::toggle_watched,
+            commands::get_all_tags,
+            commands::set_video_tags,
+            commands::get_video_tags,
+            commands::update_video_transcript,
+            commands::update_video_timestamps,
             metadata::fetch_video_metadata,
         ])
         .run(tauri::generate_context!())

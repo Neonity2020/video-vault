@@ -7,6 +7,7 @@ export function useVideos() {
     const [loading, setLoading] = useState(false);
     const [authors, setAuthors] = useState<string[]>([]);
     const [topics, setTopics] = useState<string[]>([]);
+    const [allTags, setAllTags] = useState<string[]>([]);
 
     const fetchVideos = useCallback(async (filter: VideoFilter = {}) => {
         setLoading(true);
@@ -17,6 +18,15 @@ export function useVideos() {
             console.error('Failed to fetch videos:', err);
         } finally {
             setLoading(false);
+        }
+    }, []);
+
+    const fetchAllTags = useCallback(async () => {
+        try {
+            const result = await invoke<{ id: number; name: string }[]>('get_all_tags');
+            setAllTags(result.map((t) => t.name));
+        } catch (err) {
+            console.error('Failed to fetch tags:', err);
         }
     }, []);
 
@@ -31,7 +41,8 @@ export function useVideos() {
         } catch (err) {
             console.error('Failed to fetch meta:', err);
         }
-    }, []);
+        await fetchAllTags();
+    }, [fetchAllTags]);
 
     const addVideo = useCallback(async (video: Video): Promise<Video | null> => {
         try {
@@ -99,19 +110,53 @@ export function useVideos() {
         }
     }, [fetchVideos]);
 
+    const updateVideoTranscript = useCallback(async (videoId: number, transcript: string): Promise<void> => {
+        try {
+            await invoke('update_video_transcript', { videoId, transcript });
+            await fetchVideos();
+        } catch (err) {
+            console.error('Failed to update transcript:', err);
+            throw err;
+        }
+    }, [fetchVideos]);
+
+    const updateVideoTimestamps = useCallback(async (videoId: number, timestamps: string): Promise<void> => {
+        try {
+            await invoke('update_video_timestamps', { videoId, timestamps });
+            await fetchVideos();
+        } catch (err) {
+            console.error('Failed to update timestamps:', err);
+            throw err;
+        }
+    }, [fetchVideos]);
+
+    const getVideo = useCallback(async (id: number): Promise<Video | null> => {
+        try {
+            return await invoke<Video | null>('get_video', { id });
+        } catch (err) {
+            console.error('Failed to get video:', err);
+            throw err;
+        }
+    }, []);
+
     return {
         videos,
         loading,
         authors,
         topics,
+        allTags,
         fetchVideos,
         fetchMeta,
+        fetchAllTags,
         addVideo,
         updateVideo,
         deleteVideo,
         toggleWatched,
         summarizeVideo,
         translateSummary,
+        updateVideoTranscript,
+        updateVideoTimestamps,
+        getVideo,
     };
 }
 

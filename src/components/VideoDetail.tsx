@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Video } from '../types';
-import VideoPlayer from './VideoPlayer';
+import VideoPlayer, { VideoPlayerRef } from './VideoPlayer';
 import MarkdownRenderer from './MarkdownRenderer';
 
 interface VideoDetailProps {
@@ -11,8 +12,12 @@ interface VideoDetailProps {
     onSummarize: () => void;
     onTranslate: () => void;
     onToggleWatched: () => void;
+    onUpdateTranscript: (transcript: string) => void;
+    onUpdateTimestamps: (timestamps: string) => void;
     summarizing: boolean;
     translating: boolean;
+    savingTranscript: boolean;
+    savingTimestamps: boolean;
 }
 
 export default function VideoDetail({
@@ -23,10 +28,78 @@ export default function VideoDetail({
     onSummarize,
     onTranslate,
     onToggleWatched,
+    onUpdateTranscript,
+    onUpdateTimestamps,
     summarizing,
     translating,
+    savingTranscript,
+    savingTimestamps,
 }: VideoDetailProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showEnglish, setShowEnglish] = useState(false);
+    const [showTranscript, setShowTranscript] = useState(false);
+    const [isEditingTranscript, setIsEditingTranscript] = useState(false);
+    const [tempTranscript, setTempTranscript] = useState(video.transcript || '');
+    const [isEditingTimestamps, setIsEditingTimestamps] = useState(false);
+    const [tempTimestamps, setTempTimestamps] = useState(video.timestamps || '');
+    const playerRef = useRef<VideoPlayerRef>(null);
+
+    const openAuthorPage = async () => {
+        if (video.author_url) {
+            try {
+                await invoke('plugin:opener|open_url', { url: video.author_url });
+            } catch (err) {
+                console.error('Failed to open author URL:', err);
+            }
+        }
+    };
+
+    const displayedSummary = showEnglish && video.ai_summary_en
+        ? video.ai_summary_en
+        : video.ai_summary;
+
+    const renderTimestamps = (text: string) => {
+        // Match HH:MM:SS or MM:SS
+        const regex = /(?:(?:([0-5]?\d):)?([0-5]?\d):([0-5]\d))/g;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+
+        while ((match = regex.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                parts.push(text.slice(lastIndex, match.index));
+            }
+
+            const timeString = match[0];
+            const hours = parseInt(match[1] || '0', 10);
+            const minutes = parseInt(match[2], 10);
+            const seconds = parseInt(match[3], 10);
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+            parts.push(
+                <span
+                    key={match.index}
+                    onClick={() => playerRef.current?.seekTo(totalSeconds)}
+                    style={{
+                        color: 'var(--accent)',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        textUnderlineOffset: '2px'
+                    }}
+                    title="点击跳转到视频的此时间"
+                >
+                    {timeString}
+                </span>
+            );
+            lastIndex = regex.lastIndex;
+        }
+
+        if (lastIndex < text.length) {
+            parts.push(text.slice(lastIndex));
+        }
+
+        return parts.length > 0 ? parts : text;
+    };
 
     return (
         <>
@@ -39,15 +112,24 @@ export default function VideoDetail({
                             <span className={`type-badge ${video.video_type}`}>
                                 {video.video_type === 'youtube' ? 'YouTube' : video.video_type === 'bilibili' ? 'Bilibili' : '本地'}
                             </span>
-                            <span className="meta-tag author">👤 {video.author}</span>
+                            {video.author_url ? (
+                                <span className="meta-tag author author-link" onClick={openAuthorPage} title="打开UP主主页">
+                                    👤 {video.author} ↗
+                                </span>
+                            ) : (
+                                <span className="meta-tag author">👤 {video.author}</span>
+                            )}
                             <span className="meta-tag topic">📂 {video.topic}</span>
+                            {video.tags?.map((tag) => (
+                                <span key={tag} className="meta-tag tag">🏷️ {tag}</span>
+                            ))}
                         </div>
                     </div>
                     <button className="close-btn" onClick={onClose}>✕</button>
                 </div>
 
                 <div className="detail-body">
-                    <VideoPlayer video={video} />
+                    <VideoPlayer ref={playerRef} video={video} />
 
                     <div className="detail-meta-grid" style={{ marginBottom: 24 }}>
                         <div className="detail-meta-item">
@@ -117,9 +199,9 @@ export default function VideoDetail({
                                     <div className="spinner"></div>
                                     <span>正在生成 AI 总结...</span>
                                 </div>
-                            ) : video.ai_summary ? (
+                            ) : displayedSummary ? (
                                 <div className="ai-summary-content">
-                                    <MarkdownRenderer content={video.ai_summary} />
+                                    <MarkdownRenderer content={displayedSummary} />
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
@@ -133,22 +215,236 @@ export default function VideoDetail({
                                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                                     <button
                                         className="btn btn-ghost btn-sm"
-                                        onClick={onSummarize}
+                                        onClick={() => { setShowEnglish(false); onSummarize(); }}
                                     >
                                         🔄 重新生成
                                     </button>
-                                    <button
-                                        className="btn btn-secondary btn-sm"
-                                        onClick={onTranslate}
-                                    >
-                                        🌐 翻译为中文
-                                    </button>
+                                    {video.ai_summary_en ? (
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={() => setShowEnglish(!showEnglish)}
+                                        >
+                                            {showEnglish ? '🌐 切换为中文' : '🌐 切换为英文'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={onTranslate}
+                                        >
+                                            🌐 翻译为中文
+                                        </button>
+                                    )}
                                 </div>
                             )}
                             {translating && (
                                 <div className="ai-loading" style={{ marginTop: 12 }}>
                                     <div className="spinner"></div>
                                     <span>正在翻译为中文...</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="detail-section">
+                        <div className="ai-summary-section">
+                            <div className="ai-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <span className="sparkle">📝</span>
+                                    <h3>视频逐字稿</h3>
+                                </div>
+                                {!isEditingTranscript && (
+                                    <button
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => {
+                                            setTempTranscript(video.transcript || '');
+                                            setIsEditingTranscript(true);
+                                        }}
+                                    >
+                                        ✏️ 编辑
+                                    </button>
+                                )}
+                            </div>
+                            
+                            {isEditingTranscript ? (
+                                <div style={{ marginTop: 12 }}>
+                                    <textarea
+                                        value={tempTranscript}
+                                        onChange={(e) => setTempTranscript(e.target.value)}
+                                        placeholder="请在此粘贴视频的逐字稿文本..."
+                                        style={{
+                                            width: '100%',
+                                            minHeight: '200px',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid var(--border-color)',
+                                            background: 'var(--bg-secondary)',
+                                            color: 'var(--text-primary)',
+                                            fontFamily: 'inherit',
+                                            fontSize: '13px',
+                                            lineHeight: '1.6',
+                                            resize: 'vertical',
+                                            marginBottom: '12px'
+                                        }}
+                                        disabled={savingTranscript}
+                                    />
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <button
+                                            className="btn btn-primary btn-sm"
+                                            onClick={() => {
+                                                onUpdateTranscript(tempTranscript);
+                                                setIsEditingTranscript(false);
+                                            }}
+                                            disabled={savingTranscript}
+                                        >
+                                            {savingTranscript ? '保存中...' : '💾 保存'}
+                                        </button>
+                                        <button
+                                            className="btn btn-ghost btn-sm"
+                                            onClick={() => {
+                                                setIsEditingTranscript(false);
+                                                setTempTranscript(video.transcript || '');
+                                            }}
+                                            disabled={savingTranscript}
+                                        >
+                                            取消
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : savingTranscript ? (
+                                <div className="ai-loading">
+                                    <div className="spinner"></div>
+                                    <span>正在保存逐字稿...</span>
+                                </div>
+                            ) : video.transcript ? (
+                                <>
+                                    <div
+                                        className="transcript-content"
+                                        style={{
+                                            maxHeight: showTranscript ? 'none' : '150px',
+                                            overflow: 'hidden',
+                                            position: 'relative',
+                                            fontSize: 13,
+                                            lineHeight: 1.8,
+                                            color: 'var(--text-secondary)',
+                                            whiteSpace: 'pre-wrap',
+                                            marginTop: 12,
+                                        }}
+                                    >
+                                        {video.transcript}
+                                        {!showTranscript && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                bottom: 0,
+                                                left: 0,
+                                                right: 0,
+                                                height: 60,
+                                                background: 'linear-gradient(transparent, var(--bg-primary))',
+                                            }} />
+                                        )}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                        <button
+                                            className="btn btn-ghost btn-sm"
+                                            onClick={() => setShowTranscript(!showTranscript)}
+                                        >
+                                            {showTranscript ? '📖 收起' : '📖 展开全文'}
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, marginTop: 12 }}>
+                                    <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>尚未添加视频逐字稿，请点击编辑手动粘贴。</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="detail-section">
+                        <div className="ai-summary-section">
+                            <div className="ai-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <span className="sparkle">⏱️</span>
+                                    <h3>视频时间戳</h3>
+                                </div>
+                                {!isEditingTimestamps && (
+                                    <button
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={() => {
+                                            setTempTimestamps(video.timestamps || '');
+                                            setIsEditingTimestamps(true);
+                                        }}
+                                    >
+                                        ✏️ 编辑
+                                    </button>
+                                )}
+                            </div>
+                            
+                            {isEditingTimestamps ? (
+                                <div style={{ marginTop: 12 }}>
+                                    <textarea
+                                        value={tempTimestamps}
+                                        onChange={(e) => setTempTimestamps(e.target.value)}
+                                        placeholder="例如：\n00:00 开场介绍\n01:30 核心功能演示\n05:45 总结"
+                                        style={{
+                                            width: '100%',
+                                            minHeight: '150px',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid var(--border-color)',
+                                            background: 'var(--bg-secondary)',
+                                            color: 'var(--text-primary)',
+                                            fontFamily: 'inherit',
+                                            fontSize: '13px',
+                                            lineHeight: '1.6',
+                                            resize: 'vertical',
+                                            marginBottom: '12px'
+                                        }}
+                                        disabled={savingTimestamps}
+                                    />
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <button
+                                            className="btn btn-primary btn-sm"
+                                            onClick={() => {
+                                                onUpdateTimestamps(tempTimestamps);
+                                                setIsEditingTimestamps(false);
+                                            }}
+                                            disabled={savingTimestamps}
+                                        >
+                                            {savingTimestamps ? '保存中...' : '💾 保存'}
+                                        </button>
+                                        <button
+                                            className="btn btn-ghost btn-sm"
+                                            onClick={() => {
+                                                setIsEditingTimestamps(false);
+                                                setTempTimestamps(video.timestamps || '');
+                                            }}
+                                            disabled={savingTimestamps}
+                                        >
+                                            取消
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : savingTimestamps ? (
+                                <div className="ai-loading">
+                                    <div className="spinner"></div>
+                                    <span>正在保存时间戳...</span>
+                                </div>
+                            ) : video.timestamps ? (
+                                <div
+                                    className="transcript-content"
+                                    style={{
+                                        fontSize: 13,
+                                        lineHeight: 1.8,
+                                        color: 'var(--text-secondary)',
+                                        whiteSpace: 'pre-wrap',
+                                        marginTop: 12,
+                                    }}
+                                >
+                                    {renderTimestamps(video.timestamps)}
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, marginTop: 12 }}>
+                                    <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>尚未添加视频时间戳，请点击编辑手动粘贴。</p>
                                 </div>
                             )}
                         </div>

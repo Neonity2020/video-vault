@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct VideoMetadata {
     pub title: String,
     pub author: String,
+    pub author_url: String,
     pub thumbnail: String,
     pub description: String,
     pub duration: String,
@@ -82,6 +83,7 @@ async fn fetch_youtube_metadata(url: &str) -> Result<VideoMetadata, String> {
     Ok(VideoMetadata {
         title: json["title"].as_str().unwrap_or("").to_string(),
         author: json["author_name"].as_str().unwrap_or("").to_string(),
+        author_url: json["author_url"].as_str().unwrap_or("").to_string(),
         thumbnail: json["thumbnail_url"].as_str().unwrap_or("").to_string(),
         description: String::new(), // oEmbed doesn't provide description
         duration: String::new(),
@@ -138,29 +140,31 @@ async fn fetch_bilibili_metadata(url: &str) -> Result<VideoMetadata, String> {
     } else {
         String::new()
     };
-
-    // Bilibili API often returns an `http://` thumbnail URL which is blocked by
-    // our content security policy (only `https:` is allowed). Convert it and
-    // also handle protocol-relative URLs (`//...`) by prefixing `https:`.
-    let mut thumbnail = data["pic"].as_str().unwrap_or("").to_string();
-    if thumbnail.starts_with("http://") {
-        thumbnail = thumbnail.replacen("http://", "https://", 1);
-    } else if thumbnail.starts_with("//") {
-        thumbnail = format!("https:{}", thumbnail);
-    }
-
-    // Download thumbnail and convert to base64 data URL to bypass anti-hotlinking
-    let thumbnail_url = data["pic"].as_str().unwrap_or("");
-    let thumbnail = if !thumbnail_url.is_empty() {
-        download_image_as_data_url(thumbnail_url).await.unwrap_or_default()
+    // Download thumbnail and convert to base64 data URL to bypass anti-hotlinking.
+    // Normalise the URL first: Bilibili often returns http:// or protocol-relative //.
+    let raw_thumb = data["pic"].as_str().unwrap_or("");
+    let thumbnail = if !raw_thumb.is_empty() {
+        let normalised = if raw_thumb.starts_with("http://") {
+            raw_thumb.replacen("http://", "https://", 1)
+        } else if raw_thumb.starts_with("//") {
+            format!("https:{}", raw_thumb)
+        } else {
+            raw_thumb.to_string()
+        };
+        download_image_as_data_url(&normalised).await.unwrap_or_default()
     } else {
         String::new()
     };
 
+    // Build author space URL from owner mid
+    let author_url = data["owner"]["mid"].as_i64()
+        .map(|mid| format!("https://space.bilibili.com/{}", mid))
+        .unwrap_or_default();
+
     Ok(VideoMetadata {
         title: data["title"].as_str().unwrap_or("").to_string(),
         author: data["owner"]["name"].as_str().unwrap_or("").to_string(),
-        thumbnail,
+        author_url,
         thumbnail,
         description: data["desc"].as_str().unwrap_or("").to_string(),
         duration: duration_str,
@@ -207,3 +211,5 @@ pub async fn fetch_video_metadata(url: String) -> Result<VideoMetadata, String> 
         Err("Unsupported URL. Only YouTube and Bilibili URLs are supported.".to_string())
     }
 }
+
+// Transcript functions removed.

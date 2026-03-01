@@ -20,6 +20,7 @@ export default function App() {
     loading,
     authors,
     topics,
+    allTags,
     fetchVideos,
     fetchMeta,
     addVideo,
@@ -28,6 +29,9 @@ export default function App() {
     toggleWatched,
     summarizeVideo,
     translateSummary,
+    updateVideoTranscript,
+    updateVideoTimestamps,
+    getVideo,
   } = useVideos();
   const { settings, loading: savingSettings, saveSettings } = useSettings();
 
@@ -36,12 +40,15 @@ export default function App() {
   const [filterAuthor, setFilterAuthor] = useState('');
   const [filterTopic, setFilterTopic] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [filterTag, setFilterTag] = useState('');
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingVideo, setEditingVideo] = useState<Video | undefined>(undefined);
   const [formSaving, setFormSaving] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [translating, setTranslating] = useState(false);
+  const [fetchingTranscript, setFetchingTranscript] = useState(false);
+  const [savingTimestamps, setSavingTimestamps] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
@@ -55,6 +62,7 @@ export default function App() {
     if (search) filter.search = search;
     if (filterAuthor) filter.author = filterAuthor;
     if (filterTopic) filter.topic = filterTopic;
+    if (filterTag) filter.tags = [filterTag];
 
     // Handle type filter from sidebar navigation
     if (activeView.startsWith('type:')) {
@@ -64,7 +72,7 @@ export default function App() {
     }
 
     fetchVideos(filter);
-  }, [search, filterAuthor, filterTopic, filterType, activeView, fetchVideos]);
+  }, [search, filterAuthor, filterTopic, filterType, filterTag, activeView, fetchVideos]);
 
   useEffect(() => {
     applyFilters();
@@ -80,6 +88,7 @@ export default function App() {
     if (!view.startsWith('type:')) {
       setFilterType('');
     }
+    // Don't clear filterTag here - it's managed by Sidebar's onFilterTag
   };
 
   const handleAddVideo = () => {
@@ -131,8 +140,11 @@ export default function App() {
     if (!selectedVideo?.id) return;
     setSummarizing(true);
     try {
-      const summary = await summarizeVideo(selectedVideo.id);
-      setSelectedVideo((prev) => prev ? { ...prev, ai_summary: summary } : null);
+      await summarizeVideo(selectedVideo.id);
+      const updatedVideo = await getVideo(selectedVideo.id);
+      if (updatedVideo) {
+        setSelectedVideo(updatedVideo);
+      }
       showToast('AI 总结已生成');
     } catch (err: any) {
       showToast(err?.toString() || 'AI 总结生成失败', 'error');
@@ -145,13 +157,42 @@ export default function App() {
     if (!selectedVideo?.id) return;
     setTranslating(true);
     try {
-      const summary = await translateSummary(selectedVideo.id);
-      setSelectedVideo((prev) => prev ? { ...prev, ai_summary: summary } : null);
+      const originalEn = selectedVideo.ai_summary;
+      const translated = await translateSummary(selectedVideo.id);
+      setSelectedVideo((prev) => prev ? { ...prev, ai_summary: translated, ai_summary_en: originalEn } : null);
       showToast('已翻译为中文');
     } catch (err: any) {
       showToast(err?.toString() || '翻译失败', 'error');
     } finally {
       setTranslating(false);
+    }
+  };
+
+  const handleUpdateTranscript = async (transcript: string) => {
+    if (!selectedVideo?.id) return;
+    setFetchingTranscript(true); // Using this as saving state for transcript
+    try {
+      await updateVideoTranscript(selectedVideo.id, transcript);
+      setSelectedVideo((prev) => prev ? { ...prev, transcript } : null);
+      showToast('逐字稿已保存');
+    } catch (err: any) {
+      showToast(err?.toString() || '保存逐字稿失败', 'error');
+    } finally {
+      setFetchingTranscript(false);
+    }
+  };
+
+  const handleUpdateTimestamps = async (timestamps: string) => {
+    if (!selectedVideo?.id) return;
+    setSavingTimestamps(true);
+    try {
+      await updateVideoTimestamps(selectedVideo.id, timestamps);
+      setSelectedVideo((prev) => prev ? { ...prev, timestamps } : null);
+      showToast('时间戳已保存');
+    } catch (err: any) {
+      showToast(err?.toString() || '保存时间戳失败', 'error');
+    } finally {
+      setSavingTimestamps(false);
     }
   };
 
@@ -174,6 +215,7 @@ export default function App() {
     }
     if (filterAuthor) return `作者: ${filterAuthor}`;
     if (filterTopic) return `主题: ${filterTopic}`;
+    if (filterTag) return `标签: ${filterTag}`;
     return '全部视频';
   };
 
@@ -184,11 +226,14 @@ export default function App() {
         onNavigate={handleNavigate}
         authors={authors}
         topics={topics}
+        allTags={allTags}
         videoCount={videos.length}
         onFilterAuthor={setFilterAuthor}
         onFilterTopic={setFilterTopic}
+        onFilterTag={setFilterTag}
         activeAuthor={filterAuthor}
         activeTopic={filterTopic}
+        activeTag={filterTag}
       />
 
       <div className="main-content">
@@ -238,8 +283,12 @@ export default function App() {
           onSummarize={handleSummarize}
           onTranslate={handleTranslate}
           onToggleWatched={handleToggleWatched}
+          onUpdateTranscript={handleUpdateTranscript}
+          onUpdateTimestamps={handleUpdateTimestamps}
           summarizing={summarizing}
           translating={translating}
+          savingTranscript={fetchingTranscript}
+          savingTimestamps={savingTimestamps}
         />
       )}
 
@@ -249,6 +298,7 @@ export default function App() {
           onSave={handleSaveVideo}
           onClose={() => { setShowForm(false); setEditingVideo(undefined); }}
           saving={formSaving}
+          allTags={allTags}
         />
       )}
 

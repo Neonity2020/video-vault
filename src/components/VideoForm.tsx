@@ -7,21 +7,25 @@ interface VideoFormProps {
     onSave: (video: Video) => void;
     onClose: () => void;
     saving?: boolean;
+    allTags?: string[];
 }
 
 interface FetchedMeta {
     title: string;
     author: string;
+    author_url: string;
     thumbnail: string;
     description: string;
     duration: string;
 }
 
-export default function VideoForm({ video, onSave, onClose, saving }: VideoFormProps) {
+export default function VideoForm({ video, onSave, onClose, saving, allTags = [] }: VideoFormProps) {
     const [form, setForm] = useState<Video>(video || { ...DEFAULT_VIDEO });
     const [fetching, setFetching] = useState(false);
     const [fetchError, setFetchError] = useState('');
     const [fetchSuccess, setFetchSuccess] = useState(false);
+    const [tagInput, setTagInput] = useState('');
+    const [showTagSuggestions, setShowTagSuggestions] = useState(false);
     const isEdit = !!video?.id;
 
     useEffect(() => {
@@ -68,6 +72,7 @@ export default function VideoForm({ video, onSave, onClose, saving }: VideoFormP
                 ...prev,
                 title: meta.title || prev.title,
                 author: meta.author || prev.author,
+                author_url: meta.author_url || prev.author_url,
                 thumbnail: meta.thumbnail || prev.thumbnail,
                 description: meta.description || prev.description,
                 duration: meta.duration || prev.duration,
@@ -212,6 +217,68 @@ export default function VideoForm({ video, onSave, onClose, saving }: VideoFormP
                             <textarea className="form-textarea" value={form.description}
                                 onChange={(e) => handleChange('description', e.target.value)}
                                 placeholder="视频简介或备注..." rows={3} />
+                        </div>
+
+                        {/* Tags */}
+                        <div className="form-group">
+                            <label className="form-label">标签</label>
+                            <div className="tag-input-area">
+                                {form.tags.map((tag) => (
+                                    <span key={tag} className="tag-chip">
+                                        {tag}
+                                        <button type="button" className="tag-chip-remove"
+                                            onClick={() => setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }))}
+                                        >×</button>
+                                    </span>
+                                ))}
+                                <div style={{ position: 'relative', flex: 1, minWidth: 120 }}>
+                                    <input
+                                        className="tag-input"
+                                        type="text"
+                                        value={tagInput}
+                                        onChange={(e) => {
+                                            setTagInput(e.target.value);
+                                            setShowTagSuggestions(true);
+                                        }}
+                                        onFocus={() => setShowTagSuggestions(true)}
+                                        onBlur={() => setTimeout(() => setShowTagSuggestions(false), 200)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                const val = tagInput.trim();
+                                                if (val && !form.tags.includes(val)) {
+                                                    setForm((prev) => ({ ...prev, tags: [...prev.tags, val] }));
+                                                }
+                                                setTagInput('');
+                                                setShowTagSuggestions(false);
+                                            }
+                                        }}
+                                        placeholder="输入标签后按回车..."
+                                    />
+                                    {showTagSuggestions && tagInput && (() => {
+                                        const suggestions = allTags.filter(
+                                            (t) => t.toLowerCase().includes(tagInput.toLowerCase()) && !form.tags.includes(t)
+                                        );
+                                        if (suggestions.length === 0) return null;
+                                        return (
+                                            <div className="tag-suggestions">
+                                                {suggestions.slice(0, 8).map((t) => (
+                                                    <div key={t} className="tag-suggestion-item"
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault();
+                                                            setForm((prev) => ({ ...prev, tags: [...prev.tags, t] }));
+                                                            setTagInput('');
+                                                            setShowTagSuggestions(false);
+                                                        }}
+                                                    >
+                                                        🏷️ {t}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
                         </div>
                     </div>
 

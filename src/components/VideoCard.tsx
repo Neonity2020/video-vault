@@ -28,6 +28,12 @@ export default function VideoCard({ video, onClick }: VideoCardProps) {
                 <div className="video-card-meta">
                     <span className="meta-tag author">👤 {video.author}</span>
                     <span className="meta-tag topic">📂 {video.topic}</span>
+                    {video.tags?.slice(0, 3).map((tag) => (
+                        <span key={tag} className="meta-tag tag">🏷️ {tag}</span>
+                    ))}
+                    {video.tags?.length > 3 && (
+                        <span className="meta-tag tag">+{video.tags.length - 3}</span>
+                    )}
                 </div>
                 {video.description && (
                     <div className="video-card-desc">{video.description}</div>

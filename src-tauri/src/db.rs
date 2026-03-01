@@ -10,15 +10,27 @@ pub struct Video {
     pub file_path: Option<String>,
     pub url: Option<String>,
     pub author: String,
+    pub author_url: String,
     pub topic: String,
     pub description: String,
     pub duration: String,
     pub thumbnail: String,
     pub ai_summary: String,
+    pub ai_summary_en: String,
+    pub transcript: String,
+    pub timestamps: String,
     pub rating: i32,
     pub is_watched: i32,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Tag {
+    pub id: i64,
+    pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,6 +40,7 @@ pub struct VideoFilter {
     pub topic: Option<String>,
     pub video_type: Option<String>,
     pub is_watched: Option<i32>,
+    pub tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -67,11 +80,15 @@ pub fn init_db(app_data_dir: &std::path::Path) -> Connection {
             file_path TEXT,
             url TEXT,
             author TEXT NOT NULL DEFAULT 'Unknown',
+            author_url TEXT DEFAULT '',
             topic TEXT NOT NULL DEFAULT 'General',
             description TEXT DEFAULT '',
             duration TEXT DEFAULT '',
             thumbnail TEXT DEFAULT '',
             ai_summary TEXT DEFAULT '',
+            ai_summary_en TEXT DEFAULT '',
+            transcript TEXT DEFAULT '',
+            timestamps TEXT DEFAULT '',
             rating INTEGER DEFAULT 0,
             is_watched INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -96,6 +113,27 @@ pub fn init_db(app_data_dir: &std::path::Path) -> Connection {
         ",
     )
     .expect("Failed to initialize database");
+
+    // Migration: add author_url column for existing databases
+    let _ = conn.execute(
+        "ALTER TABLE videos ADD COLUMN author_url TEXT DEFAULT ''",
+        [],
+    );
+    // Migration: add ai_summary_en column for existing databases
+    let _ = conn.execute(
+        "ALTER TABLE videos ADD COLUMN ai_summary_en TEXT DEFAULT ''",
+        [],
+    );
+    // Migration: add transcript column for existing databases
+    let _ = conn.execute(
+        "ALTER TABLE videos ADD COLUMN transcript TEXT DEFAULT ''",
+        [],
+    );
+    // Migration: add timestamps column for existing databases
+    let _ = conn.execute(
+        "ALTER TABLE videos ADD COLUMN timestamps TEXT DEFAULT ''",
+        [],
+    );
 
     conn
 }
