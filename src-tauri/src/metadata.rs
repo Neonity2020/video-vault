@@ -151,13 +151,16 @@ async fn fetch_bilibili_metadata(url: &str) -> Result<VideoMetadata, String> {
         } else {
             raw_thumb.to_string()
         };
-        download_image_as_data_url(&normalised).await.unwrap_or_default()
+        download_image_as_data_url(&normalised)
+            .await
+            .unwrap_or_default()
     } else {
         String::new()
     };
 
     // Build author space URL from owner mid
-    let author_url = data["owner"]["mid"].as_i64()
+    let author_url = data["owner"]["mid"]
+        .as_i64()
         .map(|mid| format!("https://space.bilibili.com/{}", mid))
         .unwrap_or_default();
 

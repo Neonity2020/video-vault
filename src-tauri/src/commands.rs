@@ -38,9 +38,16 @@ fn get_tags_for_video(db: &rusqlite::Connection, video_id: i64) -> Vec<String> {
 }
 
 /// Helper: set tags for a video (clear old, insert new, auto-create tags)
-fn set_tags_for_video(db: &rusqlite::Connection, video_id: i64, tag_names: &[String]) -> Result<(), String> {
-    db.execute("DELETE FROM video_tags WHERE video_id = ?1", rusqlite::params![video_id])
-        .map_err(|e| e.to_string())?;
+fn set_tags_for_video(
+    db: &rusqlite::Connection,
+    video_id: i64,
+    tag_names: &[String],
+) -> Result<(), String> {
+    db.execute(
+        "DELETE FROM video_tags WHERE video_id = ?1",
+        rusqlite::params![video_id],
+    )
+    .map_err(|e| e.to_string())?;
     for name in tag_names {
         let trimmed = name.trim();
         if trimmed.is_empty() {
@@ -54,7 +61,11 @@ fn set_tags_for_video(db: &rusqlite::Connection, video_id: i64, tag_names: &[Str
         .map_err(|e| e.to_string())?;
         // Get tag id
         let tag_id: i64 = db
-            .query_row("SELECT id FROM tags WHERE name = ?1", rusqlite::params![trimmed], |row| row.get(0))
+            .query_row(
+                "SELECT id FROM tags WHERE name = ?1",
+                rusqlite::params![trimmed],
+                |row| row.get(0),
+            )
             .map_err(|e| e.to_string())?;
         // Link
         db.execute(
@@ -119,7 +130,10 @@ pub fn get_videos(state: State<DbState>, filter: VideoFilter) -> Result<Vec<Vide
 
     if let Some(ref search) = filter.search {
         if !search.is_empty() {
-            conditions.push("(v.title LIKE ?1 OR v.description LIKE ?1 OR v.author LIKE ?1 OR v.topic LIKE ?1)".to_string());
+            conditions.push(
+                "(v.title LIKE ?1 OR v.description LIKE ?1 OR v.author LIKE ?1 OR v.topic LIKE ?1)"
+                    .to_string(),
+            );
             params.push(Box::new(format!("%{}%", search)));
         }
     }
@@ -153,7 +167,11 @@ pub fn get_videos(state: State<DbState>, filter: VideoFilter) -> Result<Vec<Vide
     // Tag filtering: video must have ALL specified tags
     let mut join_clause = String::new();
     if let Some(ref tags) = filter.tags {
-        let tags: Vec<&str> = tags.iter().map(|s| s.as_str()).filter(|s| !s.is_empty()).collect();
+        let tags: Vec<&str> = tags
+            .iter()
+            .map(|s| s.as_str())
+            .filter(|s| !s.is_empty())
+            .collect();
         if !tags.is_empty() {
             for (i, tag) in tags.iter().enumerate() {
                 let alias = format!("vt{}", i);
@@ -198,12 +216,14 @@ pub fn get_video(state: State<DbState>, id: i64) -> Result<Option<Video>, String
     let mut stmt = db
         .prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, ai_summary, ai_summary_en, transcript, timestamps, rating, is_watched, created_at, updated_at FROM videos WHERE id = ?1")
         .map_err(|e| e.to_string())?;
-    let mut rows = stmt.query_map(rusqlite::params![id], row_to_video).map_err(|e| e.to_string())?;
+    let mut rows = stmt
+        .query_map(rusqlite::params![id], row_to_video)
+        .map_err(|e| e.to_string())?;
     match rows.next() {
         Some(Ok(mut video)) => {
             video.tags = get_tags_for_video(&db, id);
             Ok(Some(video))
-        },
+        }
         Some(Err(e)) => Err(e.to_string()),
         None => Ok(None),
     }
@@ -212,37 +232,50 @@ pub fn get_video(state: State<DbState>, id: i64) -> Result<Option<Video>, String
 #[tauri::command]
 pub fn get_authors(state: State<DbState>) -> Result<Vec<String>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    let mut stmt = db.prepare("SELECT DISTINCT author FROM videos ORDER BY author").map_err(|e| e.to_string())?;
-    let authors = stmt.query_map([], |row| row.get::<_, String>(0)).map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok()).collect();
+    let mut stmt = db
+        .prepare("SELECT DISTINCT author FROM videos ORDER BY author")
+        .map_err(|e| e.to_string())?;
+    let authors = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
     Ok(authors)
 }
 
 #[tauri::command]
 pub fn get_topics(state: State<DbState>) -> Result<Vec<String>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    let mut stmt = db.prepare("SELECT DISTINCT topic FROM videos ORDER BY topic").map_err(|e| e.to_string())?;
-    let topics = stmt.query_map([], |row| row.get::<_, String>(0)).map_err(|e| e.to_string())?
-        .filter_map(|r| r.ok()).collect();
+    let mut stmt = db
+        .prepare("SELECT DISTINCT topic FROM videos ORDER BY topic")
+        .map_err(|e| e.to_string())?;
+    let topics = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
     Ok(topics)
 }
 
 #[tauri::command]
 pub fn get_settings(state: State<DbState>) -> Result<AppSettings, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    let mut stmt = db.prepare("SELECT key, value FROM settings").map_err(|e| e.to_string())?;
-    let mut settings = AppSettings::default();
-    let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
+    let mut stmt = db
+        .prepare("SELECT key, value FROM settings")
         .map_err(|e| e.to_string())?;
-    for row in rows {
-        if let Ok((key, value)) = row {
-            match key.as_str() {
-                "api_provider" => settings.api_provider = value,
-                "api_endpoint" => settings.api_endpoint = value,
-                "api_key" => settings.api_key = value,
-                "model" => settings.model = value,
-                _ => {}
-            }
+    let mut settings = AppSettings::default();
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
+        .map_err(|e| e.to_string())?;
+    for (key, value) in rows.flatten() {
+        match key.as_str() {
+            "api_provider" => settings.api_provider = value,
+            "api_endpoint" => settings.api_endpoint = value,
+            "api_key" => settings.api_key = value,
+            "model" => settings.model = value,
+            _ => {}
         }
     }
     Ok(settings)
@@ -261,7 +294,8 @@ pub fn save_settings(state: State<DbState>, settings: AppSettings) -> Result<(),
         db.execute(
             "INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)",
             rusqlite::params![key, value],
-        ).map_err(|e| e.to_string())?;
+        )
+        .map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -276,25 +310,32 @@ pub async fn summarize_video(
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, ai_summary, ai_summary_en, transcript, rating, is_watched, created_at, updated_at FROM videos WHERE id = ?1")
             .map_err(|e| e.to_string())?;
-        let mut rows = stmt.query_map(rusqlite::params![video_id], row_to_video).map_err(|e| e.to_string())?;
-        rows.next().ok_or("Video not found".to_string())?.map_err(|e| e.to_string())?
+        let mut rows = stmt
+            .query_map(rusqlite::params![video_id], row_to_video)
+            .map_err(|e| e.to_string())?;
+        rows.next()
+            .ok_or("Video not found".to_string())?
+            .map_err(|e| e.to_string())?
     };
 
     let settings = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let mut stmt = db.prepare("SELECT key, value FROM settings").map_err(|e| e.to_string())?;
-        let mut s = AppSettings::default();
-        let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
+        let mut stmt = db
+            .prepare("SELECT key, value FROM settings")
             .map_err(|e| e.to_string())?;
-        for row in rows {
-            if let Ok((key, value)) = row {
-                match key.as_str() {
-                    "api_provider" => s.api_provider = value,
-                    "api_endpoint" => s.api_endpoint = value,
-                    "api_key" => s.api_key = value,
-                    "model" => s.model = value,
-                    _ => {}
-                }
+        let mut s = AppSettings::default();
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?;
+        for (key, value) in rows.flatten() {
+            match key.as_str() {
+                "api_provider" => s.api_provider = value,
+                "api_endpoint" => s.api_endpoint = value,
+                "api_key" => s.api_key = value,
+                "model" => s.model = value,
+                _ => {}
             }
         }
         s
@@ -307,7 +348,11 @@ pub async fn summarize_video(
     // Remove automated transcript fetching completely based on user request.
     // The transcript will be retrieved directly from the video record in the datastore.
     let transcript = video.transcript.as_str();
-    let transcript = if transcript.is_empty() { None } else { Some(transcript.to_string()) };
+    let transcript = if transcript.is_empty() {
+        None
+    } else {
+        Some(transcript.to_string())
+    };
 
     let prompt = custom_prompt.unwrap_or_else(|| {
         if let Some(ref transcript_text) = transcript {
@@ -359,16 +404,17 @@ pub async fn summarize_video(
 }
 
 #[tauri::command]
-pub async fn translate_summary(
-    state: State<'_, DbState>,
-    video_id: i64,
-) -> Result<String, String> {
+pub async fn translate_summary(state: State<'_, DbState>, video_id: i64) -> Result<String, String> {
     let video = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, ai_summary, ai_summary_en, transcript, rating, is_watched, created_at, updated_at FROM videos WHERE id = ?1")
             .map_err(|e| e.to_string())?;
-        let mut rows = stmt.query_map(rusqlite::params![video_id], row_to_video).map_err(|e| e.to_string())?;
-        rows.next().ok_or("Video not found".to_string())?.map_err(|e| e.to_string())?
+        let mut rows = stmt
+            .query_map(rusqlite::params![video_id], row_to_video)
+            .map_err(|e| e.to_string())?;
+        rows.next()
+            .ok_or("Video not found".to_string())?
+            .map_err(|e| e.to_string())?
     };
 
     let summary = video.ai_summary;
@@ -378,19 +424,22 @@ pub async fn translate_summary(
 
     let settings = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let mut stmt = db.prepare("SELECT key, value FROM settings").map_err(|e| e.to_string())?;
-        let mut s = AppSettings::default();
-        let rows = stmt.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))
+        let mut stmt = db
+            .prepare("SELECT key, value FROM settings")
             .map_err(|e| e.to_string())?;
-        for row in rows {
-            if let Ok((key, value)) = row {
-                match key.as_str() {
-                    "api_provider" => s.api_provider = value,
-                    "api_endpoint" => s.api_endpoint = value,
-                    "api_key" => s.api_key = value,
-                    "model" => s.model = value,
-                    _ => {}
-                }
+        let mut s = AppSettings::default();
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?;
+        for (key, value) in rows.flatten() {
+            match key.as_str() {
+                "api_provider" => s.api_provider = value,
+                "api_endpoint" => s.api_endpoint = value,
+                "api_key" => s.api_key = value,
+                "model" => s.model = value,
+                _ => {}
             }
         }
         s
@@ -424,7 +473,11 @@ pub async fn translate_summary(
     Ok(translated)
 }
 
-async fn call_openai_api(settings: &AppSettings, system_msg: &str, prompt: &str) -> Result<String, String> {
+async fn call_openai_api(
+    settings: &AppSettings,
+    system_msg: &str,
+    prompt: &str,
+) -> Result<String, String> {
     let client = reqwest::Client::new();
     let body = serde_json::json!({
         "model": settings.model,
@@ -441,20 +494,32 @@ async fn call_openai_api(settings: &AppSettings, system_msg: &str, prompt: &str)
         .header("Authorization", format!("Bearer {}", settings.api_key))
         .header("Content-Type", "application/json")
         .json(&body)
-        .send().await.map_err(|e| format!("API request failed: {}", e))?;
+        .send()
+        .await
+        .map_err(|e| format!("API request failed: {}", e))?;
 
     let status = response.status();
-    let text = response.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
     if !status.is_success() {
         return Err(format!("API error ({}): {}", status, text));
     }
 
-    let json: serde_json::Value = serde_json::from_str(&text)
-        .map_err(|e| format!("Failed to parse response: {}", e))?;
-    Ok(json["choices"][0]["message"]["content"].as_str().unwrap_or("Failed to extract summary").to_string())
+    let json: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("Failed to parse response: {}", e))?;
+    Ok(json["choices"][0]["message"]["content"]
+        .as_str()
+        .unwrap_or("Failed to extract summary")
+        .to_string())
 }
 
-async fn call_gemini_api(settings: &AppSettings, system_msg: &str, prompt: &str) -> Result<String, String> {
+async fn call_gemini_api(
+    settings: &AppSettings,
+    system_msg: &str,
+    prompt: &str,
+) -> Result<String, String> {
     let client = reqwest::Client::new();
     let url = format!(
         "{}/models/{}:generateContent?key={}",
@@ -480,10 +545,15 @@ async fn call_gemini_api(settings: &AppSettings, system_msg: &str, prompt: &str)
         .post(&url)
         .header("Content-Type", "application/json")
         .json(&body)
-        .send().await.map_err(|e| format!("Gemini API request failed: {}", e))?;
+        .send()
+        .await
+        .map_err(|e| format!("Gemini API request failed: {}", e))?;
 
     let status = response.status();
-    let text = response.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
     if !status.is_success() {
         return Err(format!("Gemini API error ({}): {}", status, text));
     }
@@ -491,7 +561,9 @@ async fn call_gemini_api(settings: &AppSettings, system_msg: &str, prompt: &str)
     let json: serde_json::Value = serde_json::from_str(&text)
         .map_err(|e| format!("Failed to parse Gemini response: {}", e))?;
     Ok(json["candidates"][0]["content"]["parts"][0]["text"]
-        .as_str().unwrap_or("Failed to extract summary from Gemini").to_string())
+        .as_str()
+        .unwrap_or("Failed to extract summary from Gemini")
+        .to_string())
 }
 
 #[tauri::command]
@@ -500,16 +572,24 @@ pub fn toggle_watched(state: State<DbState>, id: i64, is_watched: i32) -> Result
     db.execute(
         "UPDATE videos SET is_watched = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
         rusqlite::params![is_watched, id],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
 pub fn get_all_tags(state: State<DbState>) -> Result<Vec<Tag>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    let mut stmt = db.prepare("SELECT id, name FROM tags ORDER BY name").map_err(|e| e.to_string())?;
+    let mut stmt = db
+        .prepare("SELECT id, name FROM tags ORDER BY name")
+        .map_err(|e| e.to_string())?;
     let tags = stmt
-        .query_map([], |row| Ok(Tag { id: row.get(0)?, name: row.get(1)? }))
+        .query_map([], |row| {
+            Ok(Tag {
+                id: row.get(0)?,
+                name: row.get(1)?,
+            })
+        })
         .map_err(|e| e.to_string())?
         .filter_map(|r| r.ok())
         .collect();
@@ -517,7 +597,11 @@ pub fn get_all_tags(state: State<DbState>) -> Result<Vec<Tag>, String> {
 }
 
 #[tauri::command]
-pub fn set_video_tags(state: State<DbState>, video_id: i64, tag_names: Vec<String>) -> Result<Vec<String>, String> {
+pub fn set_video_tags(
+    state: State<DbState>,
+    video_id: i64,
+    tag_names: Vec<String>,
+) -> Result<Vec<String>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     set_tags_for_video(&db, video_id, &tag_names)?;
     Ok(get_tags_for_video(&db, video_id))
@@ -536,9 +620,11 @@ pub async fn update_video_transcript(
     transcript: String,
 ) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    
+
     // Ensure the video exists
-    let mut stmt = db.prepare("SELECT id FROM videos WHERE id = ?1").map_err(|e| e.to_string())?;
+    let mut stmt = db
+        .prepare("SELECT id FROM videos WHERE id = ?1")
+        .map_err(|e| e.to_string())?;
     if !stmt.exists(rusqlite::params![video_id]).unwrap_or(false) {
         return Err("Video not found".to_string());
     }
@@ -546,7 +632,8 @@ pub async fn update_video_transcript(
     db.execute(
         "UPDATE videos SET transcript = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
         rusqlite::params![transcript, video_id],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -558,9 +645,11 @@ pub async fn update_video_timestamps(
     timestamps: String,
 ) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
-    
+
     // Ensure the video exists
-    let mut stmt = db.prepare("SELECT id FROM videos WHERE id = ?1").map_err(|e| e.to_string())?;
+    let mut stmt = db
+        .prepare("SELECT id FROM videos WHERE id = ?1")
+        .map_err(|e| e.to_string())?;
     if !stmt.exists(rusqlite::params![video_id]).unwrap_or(false) {
         return Err("Video not found".to_string());
     }
@@ -568,7 +657,8 @@ pub async fn update_video_timestamps(
     db.execute(
         "UPDATE videos SET timestamps = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
         rusqlite::params![timestamps, video_id],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
 
     Ok(())
 }
