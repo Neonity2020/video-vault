@@ -27,6 +27,8 @@ pub fn run() {
             commands::update_video,
             commands::delete_video,
             commands::get_videos,
+            commands::get_total_video_count,
+            commands::get_video_type_counts,
             commands::get_video,
             commands::get_authors,
             commands::get_topics,

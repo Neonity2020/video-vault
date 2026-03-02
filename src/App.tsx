@@ -17,6 +17,8 @@ interface Toast {
 export default function App() {
   const {
     videos,
+    totalVideoCount,
+    videoTypeCounts,
     loading,
     authors,
     topics,
@@ -227,7 +229,8 @@ export default function App() {
         authors={authors}
         topics={topics}
         allTags={allTags}
-        videoCount={videos.length}
+        videoCount={totalVideoCount}
+        videoTypeCounts={videoTypeCounts}
         onFilterAuthor={setFilterAuthor}
         onFilterTopic={setFilterTopic}
         onFilterTag={setFilterTag}

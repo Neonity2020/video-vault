@@ -8,6 +8,8 @@ export function useVideos() {
     const [authors, setAuthors] = useState<string[]>([]);
     const [topics, setTopics] = useState<string[]>([]);
     const [allTags, setAllTags] = useState<string[]>([]);
+    const [totalVideoCount, setTotalVideoCount] = useState(0);
+    const [videoTypeCounts, setVideoTypeCounts] = useState<Record<string, number>>({});
 
     const fetchVideos = useCallback(async (filter: VideoFilter = {}) => {
         setLoading(true);
@@ -32,12 +34,16 @@ export function useVideos() {
 
     const fetchMeta = useCallback(async () => {
         try {
-            const [a, t] = await Promise.all([
+            const [a, t, count, typeCounts] = await Promise.all([
                 invoke<string[]>('get_authors'),
                 invoke<string[]>('get_topics'),
+                invoke<number>('get_total_video_count'),
+                invoke<Record<string, number>>('get_video_type_counts'),
             ]);
             setAuthors(a);
             setTopics(t);
+            setTotalVideoCount(count);
+            setVideoTypeCounts(typeCounts);
         } catch (err) {
             console.error('Failed to fetch meta:', err);
         }
@@ -141,6 +147,8 @@ export function useVideos() {
 
     return {
         videos,
+        totalVideoCount,
+        videoTypeCounts,
         loading,
         authors,
         topics,

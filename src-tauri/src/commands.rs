@@ -211,6 +211,38 @@ pub fn get_videos(state: State<DbState>, filter: VideoFilter) -> Result<Vec<Vide
 }
 
 #[tauri::command]
+pub fn get_total_video_count(state: State<DbState>) -> Result<i64, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = db
+        .prepare("SELECT COUNT(*) FROM videos")
+        .map_err(|e| e.to_string())?;
+    let count: i64 = stmt
+        .query_row([], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+    Ok(count)
+}
+
+#[tauri::command]
+pub fn get_video_type_counts(
+    state: State<DbState>,
+) -> Result<std::collections::HashMap<String, i64>, String> {
+    let db = state.db.lock().map_err(|e| e.to_string())?;
+    let mut stmt = db
+        .prepare("SELECT video_type, COUNT(*) FROM videos GROUP BY video_type")
+        .map_err(|e| e.to_string())?;
+    let mut counts = std::collections::HashMap::new();
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
+        })
+        .map_err(|e| e.to_string())?;
+    for row in rows.flatten() {
+        counts.insert(row.0, row.1);
+    }
+    Ok(counts)
+}
+
+#[tauri::command]
 pub fn get_video(state: State<DbState>, id: i64) -> Result<Option<Video>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let mut stmt = db

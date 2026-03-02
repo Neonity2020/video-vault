@@ -7,6 +7,7 @@ interface SidebarProps {
     topics: string[];
     allTags: string[];
     videoCount: number;
+    videoTypeCounts: Record<string, number>;
     onFilterAuthor: (author: string) => void;
     onFilterTopic: (topic: string) => void;
     onFilterTag: (tag: string) => void;
@@ -22,6 +23,7 @@ export default function Sidebar({
     topics,
     allTags,
     videoCount,
+    videoTypeCounts,
     onFilterAuthor,
     onFilterTopic,
     onFilterTag,
@@ -68,6 +70,7 @@ export default function Sidebar({
                         >
                             <span className="icon">{icon}</span>
                             <span>{type === 'local' ? '本地视频' : type === 'youtube' ? 'YouTube' : 'Bilibili'}</span>
+                            <span className="badge">{videoTypeCounts[type] || 0}</span>
                         </div>
                     ))}
                 </div>
