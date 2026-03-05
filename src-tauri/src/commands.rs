@@ -340,7 +340,7 @@ pub async fn summarize_video(
 ) -> Result<String, String> {
     let video = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, ai_summary, ai_summary_en, transcript, rating, is_watched, created_at, updated_at FROM videos WHERE id = ?1")
+        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, ai_summary, ai_summary_en, transcript, timestamps, rating, is_watched, created_at, updated_at FROM videos WHERE id = ?1")
             .map_err(|e| e.to_string())?;
         let mut rows = stmt
             .query_map(rusqlite::params![video_id], row_to_video)
@@ -439,7 +439,7 @@ pub async fn summarize_video(
 pub async fn translate_summary(state: State<'_, DbState>, video_id: i64) -> Result<String, String> {
     let video = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, ai_summary, ai_summary_en, transcript, rating, is_watched, created_at, updated_at FROM videos WHERE id = ?1")
+        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, ai_summary, ai_summary_en, transcript, timestamps, rating, is_watched, created_at, updated_at FROM videos WHERE id = ?1")
             .map_err(|e| e.to_string())?;
         let mut rows = stmt
             .query_map(rusqlite::params![video_id], row_to_video)
@@ -500,6 +500,80 @@ pub async fn translate_summary(state: State<'_, DbState>, video_id: i64) -> Resu
             "UPDATE videos SET ai_summary = ?1, ai_summary_en = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?3",
             rusqlite::params![translated, summary, video_id],
         ).map_err(|e| e.to_string())?;
+    }
+
+    Ok(translated)
+}
+
+#[tauri::command]
+pub async fn translate_timestamps(
+    state: State<'_, DbState>,
+    video_id: i64,
+) -> Result<String, String> {
+    let video = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, ai_summary, ai_summary_en, transcript, timestamps, rating, is_watched, created_at, updated_at FROM videos WHERE id = ?1")
+            .map_err(|e| e.to_string())?;
+        let mut rows = stmt
+            .query_map(rusqlite::params![video_id], row_to_video)
+            .map_err(|e| e.to_string())?;
+        rows.next()
+            .ok_or("Video not found".to_string())?
+            .map_err(|e| e.to_string())?
+    };
+
+    let timestamps = video.timestamps;
+    if timestamps.is_empty() {
+        return Err("No timestamps exist to translate".to_string());
+    }
+
+    let settings = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db
+            .prepare("SELECT key, value FROM settings")
+            .map_err(|e| e.to_string())?;
+        let mut s = AppSettings::default();
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?;
+        for (key, value) in rows.flatten() {
+            match key.as_str() {
+                "api_provider" => s.api_provider = value,
+                "api_endpoint" => s.api_endpoint = value,
+                "api_key" => s.api_key = value,
+                "model" => s.model = value,
+                _ => {}
+            }
+        }
+        s
+    };
+
+    if settings.api_key.is_empty() {
+        return Err("请先在设置中配置 API Key".to_string());
+    }
+
+    let prompt = format!(
+        "Please translate the language descriptions in the following video timestamps into Chinese. Keep the original timestamp timings and append the Chinese translation to each line. For example, '00:00 Introduction' should become '00:00 Introduction 开场介绍'. If a line is already in Chinese or has no text, preserve it as is. Only output the translated timestamps without any extra metadata or markdown formatting blocks:\n\n{}",
+        timestamps
+    );
+
+    let system_msg = "You are a professional translator and timestamp formatter. Translate descriptions to Chinese while rigidly preserving the exact timecodes.";
+
+    let translated = if settings.api_provider == "gemini" {
+        call_gemini_api(&settings, system_msg, &prompt).await?
+    } else {
+        call_openai_api(&settings, system_msg, &prompt).await?
+    };
+
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.execute(
+            "UPDATE videos SET timestamps = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+            rusqlite::params![translated, video_id],
+        )
+        .map_err(|e| e.to_string())?;
     }
 
     Ok(translated)

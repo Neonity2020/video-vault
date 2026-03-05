@@ -136,6 +136,17 @@ export function useVideos() {
         }
     }, [fetchVideos]);
 
+    const translateTimestamps = useCallback(async (videoId: number): Promise<string> => {
+        try {
+            const timestamps = await invoke<string>('translate_timestamps', { videoId });
+            await fetchVideos();
+            return timestamps;
+        } catch (err) {
+            console.error('Failed to translate timestamps:', err);
+            throw err;
+        }
+    }, [fetchVideos]);
+
     const getVideo = useCallback(async (id: number): Promise<Video | null> => {
         try {
             return await invoke<Video | null>('get_video', { id });
@@ -162,6 +173,7 @@ export function useVideos() {
         toggleWatched,
         summarizeVideo,
         translateSummary,
+        translateTimestamps,
         updateVideoTranscript,
         updateVideoTimestamps,
         getVideo,

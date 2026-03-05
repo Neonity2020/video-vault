@@ -11,11 +11,13 @@ interface VideoDetailProps {
     onDelete: () => void;
     onSummarize: () => void;
     onTranslate: () => void;
+    onTranslateTimestamps: () => void;
     onToggleWatched: () => void;
     onUpdateTranscript: (transcript: string) => void;
     onUpdateTimestamps: (timestamps: string) => void;
     summarizing: boolean;
     translating: boolean;
+    translatingTimestamps: boolean;
     savingTranscript: boolean;
     savingTimestamps: boolean;
 }
@@ -27,11 +29,13 @@ export default function VideoDetail({
     onDelete,
     onSummarize,
     onTranslate,
+    onTranslateTimestamps,
     onToggleWatched,
     onUpdateTranscript,
     onUpdateTimestamps,
     summarizing,
     translating,
+    translatingTimestamps,
     savingTranscript,
     savingTimestamps,
 }: VideoDetailProps) {
@@ -366,17 +370,28 @@ export default function VideoDetail({
                                     <span className="sparkle">⏱️</span>
                                     <h3>视频时间戳</h3>
                                 </div>
-                                {!isEditingTimestamps && (
-                                    <button
-                                        className="btn btn-ghost btn-sm"
-                                        onClick={() => {
-                                            setTempTimestamps(video.timestamps || '');
-                                            setIsEditingTimestamps(true);
-                                        }}
-                                    >
-                                        ✏️ 编辑
-                                    </button>
-                                )}
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    {!isEditingTimestamps && video.timestamps && (
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={onTranslateTimestamps}
+                                            disabled={translatingTimestamps}
+                                        >
+                                            🌐 翻译时间戳
+                                        </button>
+                                    )}
+                                    {!isEditingTimestamps && (
+                                        <button
+                                            className="btn btn-ghost btn-sm"
+                                            onClick={() => {
+                                                setTempTimestamps(video.timestamps || '');
+                                                setIsEditingTimestamps(true);
+                                            }}
+                                        >
+                                            ✏️ 编辑
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             
                             {isEditingTimestamps ? (
@@ -428,6 +443,11 @@ export default function VideoDetail({
                                 <div className="ai-loading">
                                     <div className="spinner"></div>
                                     <span>正在保存时间戳...</span>
+                                </div>
+                            ) : translatingTimestamps ? (
+                                <div className="ai-loading">
+                                    <div className="spinner"></div>
+                                    <span>正在翻译时间戳，请稍候...</span>
                                 </div>
                             ) : video.timestamps ? (
                                 <div

@@ -31,6 +31,7 @@ export default function App() {
     toggleWatched,
     summarizeVideo,
     translateSummary,
+    translateTimestamps,
     updateVideoTranscript,
     updateVideoTimestamps,
     getVideo,
@@ -51,6 +52,7 @@ export default function App() {
   const [translating, setTranslating] = useState(false);
   const [fetchingTranscript, setFetchingTranscript] = useState(false);
   const [savingTimestamps, setSavingTimestamps] = useState(false);
+  const [translatingTimestamps, setTranslatingTimestamps] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
@@ -170,6 +172,20 @@ export default function App() {
     }
   };
 
+  const handleTranslateTimestamps = async () => {
+    if (!selectedVideo?.id) return;
+    setTranslatingTimestamps(true);
+    try {
+      const translated = await translateTimestamps(selectedVideo.id);
+      setSelectedVideo((prev) => prev ? { ...prev, timestamps: translated } : null);
+      showToast('时间戳已翻译并保存');
+    } catch (err: any) {
+      showToast(err?.toString() || '翻译时间戳失败', 'error');
+    } finally {
+      setTranslatingTimestamps(false);
+    }
+  };
+
   const handleUpdateTranscript = async (transcript: string) => {
     if (!selectedVideo?.id) return;
     setFetchingTranscript(true); // Using this as saving state for transcript
@@ -285,11 +301,13 @@ export default function App() {
           onDelete={handleDeleteVideo}
           onSummarize={handleSummarize}
           onTranslate={handleTranslate}
+          onTranslateTimestamps={handleTranslateTimestamps}
           onToggleWatched={handleToggleWatched}
           onUpdateTranscript={handleUpdateTranscript}
           onUpdateTimestamps={handleUpdateTimestamps}
           summarizing={summarizing}
           translating={translating}
+          translatingTimestamps={translatingTimestamps}
           savingTranscript={fetchingTranscript}
           savingTimestamps={savingTimestamps}
         />
