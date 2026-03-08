@@ -43,6 +43,7 @@ pub fn run() {
             commands::update_video_transcript,
             commands::update_video_timestamps,
             commands::translate_timestamps,
+            commands::generate_ai_tags,
             metadata::fetch_video_metadata,
         ])
         .run(tauri::generate_context!())

@@ -768,3 +768,92 @@ pub async fn update_video_timestamps(
 
     Ok(())
 }
+
+#[tauri::command]
+pub async fn generate_ai_tags(
+    state: State<'_, DbState>,
+    title: String,
+    description: String,
+    transcript: String,
+) -> Result<Vec<String>, String> {
+    let settings = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db
+            .prepare("SELECT key, value FROM settings")
+            .map_err(|e| e.to_string())?;
+        let mut s = AppSettings::default();
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?;
+        for (key, value) in rows.flatten() {
+            match key.as_str() {
+                "api_provider" => s.api_provider = value,
+                "api_endpoint" => s.api_endpoint = value,
+                "api_key" => s.api_key = value,
+                "model" => s.model = value,
+                _ => {}
+            }
+        }
+        s
+    };
+
+    if settings.api_key.is_empty() {
+        return Err("请先在设置中配置 API Key".to_string());
+    }
+
+    if title.is_empty() && description.is_empty() {
+        return Err("请提供标题或描述来生成标签".to_string());
+    }
+
+    let prompt = if !transcript.is_empty() {
+        // Truncate very long transcripts to avoid exceeding API limits
+        let max_len = 8000;
+        let truncated = if transcript.len() > max_len {
+            format!("{}...\n\n[Transcript truncated]", &transcript[..max_len])
+        } else {
+            transcript.clone()
+        };
+        format!(
+            "Based on the following video information, generate 5-8 relevant tags. \
+            Tags should be concise, specific, and represent the key topics, technologies, or concepts covered. \
+            Return ONLY a comma-separated list of tags, nothing else. No numbering, no bullet points.\n\n\
+            Title: {}\n\
+            Description: {}\n\
+            Transcript excerpt:\n{}",
+            title, description, truncated
+        )
+    } else {
+        format!(
+            "Based on the following video information, generate 5-8 relevant tags. \
+            Tags should be concise, specific, and represent the key topics, technologies, or concepts covered. \
+            Return ONLY a comma-separated list of tags, nothing else. No numbering, no bullet points.\n\n\
+            Title: {}\n\
+            Description: {}",
+            title, description
+        )
+    };
+
+    let system_msg = "You are a helpful assistant that generates relevant tags for video content. Analyze the content and produce specific, meaningful tags as a comma-separated list.";
+
+    let response = if settings.api_provider == "gemini" {
+        call_gemini_api(&settings, system_msg, &prompt).await?
+    } else {
+        call_openai_api(&settings, system_msg, &prompt).await?
+    };
+
+    // Parse the response into tags
+    let tags: Vec<String> = response
+        .split(',')
+        .map(|tag| tag.trim().trim_start_matches('#').trim_matches('"').trim().to_string())
+        .filter(|tag| !tag.is_empty() && tag.len() <= 30 && tag.len() >= 2)
+        .collect();
+
+    if tags.is_empty() {
+        return Err("AI 未能生成有效标签，请重试".to_string());
+    }
+
+    Ok(tags)
+}
+

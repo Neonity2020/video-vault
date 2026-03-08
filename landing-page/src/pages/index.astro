@@ -1,0 +1,754 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Video Vault - 智能视频管理与知识库">
+	<nav class="navbar">
+		<div class="container">
+			<div class="nav-content">
+				<div class="logo">
+					<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<rect width="32" height="32" rx="8" fill="url(#gradient)"/>
+						<path d="M12 10L22 16L12 22V10Z" fill="white"/>
+						<defs>
+							<linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+								<stop stop-color="#667eea"/>
+								<stop offset="1" stop-color="#764ba2"/>
+							</linearGradient>
+						</defs>
+					</svg>
+					<span>Video Vault</span>
+				</div>
+				<div class="nav-links">
+					<a href="#features">功能特性</a>
+					<a href="#how-it-works">使用指南</a>
+					<a href="https://github.com/yourusername/video-vault" target="_blank">GitHub</a>
+				</div>
+			</div>
+		</div>
+	</nav>
+
+	<header class="hero">
+		<div class="container">
+			<div class="hero-content">
+				<div class="hero-text">
+					<h1>智能视频管理与知识库</h1>
+					<p class="hero-subtitle">
+						一站式管理你的 YouTube、Bilibili 和本地视频。
+						利用 AI 技术自动生成摘要、时间戳和智能标签，让知识管理更高效。
+					</p>
+					<div class="hero-cta">
+						<a href="https://github.com/yourusername/video-vault/releases" class="btn btn-primary" target="_blank">
+							立即下载
+						</a>
+						<a href="https://github.com/yourusername/video-vault" class="btn btn-secondary" target="_blank">
+							查看源码
+						</a>
+					</div>
+					<div class="hero-badges">
+						<span class="badge">✨ AI 智能标签</span>
+						<span class="badge">开源免费</span>
+						<span class="badge">本地存储</span>
+						<span class="badge">跨平台</span>
+					</div>
+				</div>
+				<div class="hero-image">
+					<div class="app-screenshot">
+						<img src="/screen-shot.jpg" alt="Video Vault 应用界面" />
+						<div class="screenshot-overlay">
+							<div class="screenshot-badge">
+								<span class="badge-dot"></span>
+								实际应用界面
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</header>
+
+	<section class="screenshot-section">
+		<div class="container">
+			<div class="screenshot-container">
+				<div class="screenshot-frame">
+					<img src="/screen-shot.jpg" alt="Video Vault 应用界面截图" />
+					<div class="frame-decoration">
+						<div class="frame-dot frame-dot-red"></div>
+						<div class="frame-dot frame-dot-yellow"></div>
+						<div class="frame-dot frame-dot-green"></div>
+					</div>
+				</div>
+				<div class="screenshot-info">
+					<h2>简洁直观的用户界面</h2>
+					<p>精心设计的用户界面，让你轻松管理所有视频资源。左侧边栏快速导航，主区域展示视频卡片，右侧详情面板提供完整的视频信息。</p>
+					<ul class="screenshot-features">
+						<li>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+								<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+							</svg>
+							智能搜索和过滤
+						</li>
+						<li>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+								<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+							</svg>
+							✨ AI 一键生成标签
+						</li>
+						<li>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+								<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+							</svg>
+							响应式设计
+						</li>
+						<li>
+							<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+								<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+							</svg>
+							快捷键支持
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section id="features" class="features">
+		<div class="container">
+			<div class="section-header">
+				<h2>强大的功能特性</h2>
+				<p>精心设计，为你提供最佳的视频管理体验</p>
+			</div>
+			<div class="features-grid">
+				<div class="feature-card">
+					<div class="feature-icon">
+						<svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+							<circle cx="24" cy="24" r="20" fill="#667eea" opacity="0.1"/>
+							<path d="M24 14V34M14 24H34" stroke="#667eea" stroke-width="3" stroke-linecap="round"/>
+						</svg>
+					</div>
+					<h3>多平台支持</h3>
+					<p>支持 YouTube、Bilibili 和本地视频的统一管理，一个工具搞定所有视频资源</p>
+				</div>
+
+				<div class="feature-card">
+					<div class="feature-icon">
+						<svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+							<circle cx="24" cy="24" r="20" fill="#8b5cf6" opacity="0.1"/>
+							<path d="M24 18C26.7614 18 29 20.2386 29 23C29 25.7614 26.7614 28 24 28C21.2386 28 19 25.7614 19 23C19 20.2386 21.2386 18 24 18ZM24 16C20.134 16 17 19.134 17 23C17 26.866 20.134 30 24 30C27.866 30 31 26.866 31 23C31 19.134 27.866 16 24 16ZM24 13C24.5523 13 25 13.4477 25 14V15.1707C27.8663 15.5825 30.4175 18.1337 30.8293 21H32C32.5523 21 33 21.4477 33 22C33 22.5523 32.5523 23 32 23H30.8293C30.4175 25.8663 27.8663 28.4175 25 28.8293V30C25 30.5523 24.5523 31 24 31C23.4477 31 23 30.5523 23 30V28.8293C20.1337 28.4175 17.5825 25.8663 17.1707 23H16C15.4477 23 15 22.5523 15 22C15 21.4477 15.4477 21 16 21H17.1707C17.5825 18.1337 20.1337 15.5825 23 15.1707V14C23 13.4477 23.4477 13 24 13Z" fill="#8b5cf6"/>
+						</svg>
+					</div>
+					<h3>AI 智能摘要</h3>
+					<p>自动生成视频内容摘要，快速了解视频核心内容，节省观看时间</p>
+				</div>
+
+				<div class="feature-card">
+					<div class="feature-icon">
+						<svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+							<circle cx="24" cy="24" r="20" fill="#ec4899" opacity="0.1"/>
+							<path d="M18 20H30V22H18V20ZM18 26H26V28H18V26ZM16 16H32C33.1046 16 34 16.8954 34 18V30C34 31.1046 33.1046 32 32 32H16C14.8954 32 14 31.1046 14 30V18C14 16.8954 14.8954 16 16 16ZM16 18V30H32V18H16Z" fill="#ec4899"/>
+						</svg>
+					</div>
+					<h3>智能时间戳</h3>
+					<p>AI 自动生成章节时间戳，快速定位到感兴趣的内容片段</p>
+				</div>
+
+				<div class="feature-card">
+					<div class="feature-icon">
+						<svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+							<circle cx="24" cy="24" r="20" fill="#f59e0b" opacity="0.1"/>
+							<path d="M18 14H30C31.1046 14 32 14.8954 32 16V32C32 33.1046 31.1046 34 30 34H18C16.8954 34 16 33.1046 16 32V16C16 14.8954 16.8954 14 18 14ZM18 16V32H30V16H18ZM20 18H28V20H20V18ZM20 22H28V24H20V22ZM20 26H26V28H20V26Z" fill="#f59e0b"/>
+						</svg>
+					</div>
+					<h3>✨ AI 智能标签</h3>
+					<p>一键生成精准标签，AI 智能识别技术栈、主题和概念，让分类更轻松</p>
+				</div>
+
+				<div class="feature-card">
+					<div class="feature-icon">
+						<svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+							<circle cx="24" cy="24" r="20" fill="#10b981" opacity="0.1"/>
+							<path d="M24 16C25.5913 16 27.1174 16.6321 28.2426 17.7574C29.3679 18.8826 30 20.4087 30 22C30 23.5913 29.3679 25.1174 28.2426 26.2426C27.1174 27.3679 25.5913 28 24 28C22.4087 28 20.8826 27.3679 19.7574 26.2426C18.6321 25.1174 18 23.5913 18 22C18 20.4087 18.6321 18.8826 19.7574 17.7574C20.8826 16.6321 22.4087 16 24 16ZM24 30C28.4183 30 32 33.5817 32 38V40H16V38C16 33.5817 19.5817 30 24 30Z" fill="#10b981"/>
+						</svg>
+					</div>
+					<h3>逐字稿支持</h3>
+					<p>自动获取视频逐字稿，支持全文搜索和笔记添加，知识沉淀更方便</p>
+				</div>
+
+				<div class="feature-card">
+					<div class="feature-icon">
+						<svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+							<circle cx="24" cy="24" r="20" fill="#06b6d4" opacity="0.1"/>
+							<path d="M24 14C28.4183 14 32 17.5817 32 22V28C32 30.2091 30.2091 32 28 32H20C17.7909 32 16 30.2091 16 28V22C16 17.5817 19.5817 14 24 14ZM24 18C22.3431 18 21 19.3431 21 21V23H27V21C27 19.3431 25.6569 18 24 18ZM24 20C24.5523 20 25 20.4477 25 21V22H23V21C23 20.4477 23.4477 20 24 20Z" fill="#06b6d4"/>
+						</svg>
+					</div>
+					<h3>隐私安全</h3>
+					<p>所有数据本地存储，支持加密，你的知识资产完全由你掌控</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section id="how-it-works" class="how-it-works">
+		<div class="container">
+			<div class="section-header">
+				<h2>简单三步，开启智能视频管理</h2>
+				<p>无需复杂配置，立即开始使用</p>
+			</div>
+			<div class="steps">
+				<div class="step">
+					<div class="step-number">1</div>
+					<h3>添加视频</h3>
+					<p>粘贴 YouTube 或 Bilibili 链接，或导入本地视频文件</p>
+				</div>
+				<div class="step-arrow">→</div>
+				<div class="step">
+					<div class="step-number">2</div>
+					<h3>AI 增强</h3>
+					<p>AI 自动生成摘要、时间戳、标签，提取逐字稿内容</p>
+				</div>
+				<div class="step-arrow">→</div>
+				<div class="step">
+					<div class="step-number">3</div>
+					<h3>知识管理</h3>
+					<p>通过智能标签分类，全文搜索，构建你的个人知识库</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="tech-stack">
+		<div class="container">
+			<div class="section-header">
+				<h2>技术栈</h2>
+				<p>基于现代化技术构建，性能卓越</p>
+			</div>
+			<div class="tech-grid">
+				<div class="tech-item">
+					<div class="tech-icon">⚡</div>
+					<h4>Tauri</h4>
+					<p>轻量级桌面应用框架</p>
+				</div>
+				<div class="tech-item">
+					<div class="tech-icon">⚛️</div>
+					<h4>React</h4>
+					<p>现代化 UI 开发</p>
+				</div>
+				<div class="tech-item">
+					<div class="tech-icon">🔷</div>
+					<h4>TypeScript</h4>
+					<p>类型安全</p>
+				</div>
+				<div class="tech-item">
+					<div class="tech-icon">🗄️</div>
+					<h4>SQLite</h4>
+					<p>本地数据存储</p>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<footer class="footer">
+		<div class="container">
+			<div class="footer-content">
+				<div class="footer-section">
+					<h4>Video Vault</h4>
+					<p>智能视频管理与知识库工具</p>
+				</div>
+				<div class="footer-section">
+					<h4>快速链接</h4>
+					<a href="#features">功能特性</a>
+					<a href="https://github.com/yourusername/video-vault" target="_blank">GitHub</a>
+					<a href="https://github.com/yourusername/video-vault/issues" target="_blank">反馈问题</a>
+				</div>
+				<div class="footer-section">
+					<h4>开源协议</h4>
+					<p>MIT License</p>
+					<a href="https://github.com/yourusername/video-vault/blob/main/LICENSE" target="_blank">查看详情</a>
+				</div>
+			</div>
+			<div class="footer-bottom">
+				<p>&copy; 2025 Video Vault. 用心构建，服务知识工作者。</p>
+			</div>
+		</div>
+	</footer>
+</Layout>
+
+<style>
+	.navbar {
+		background: rgba(255, 255, 255, 0.95);
+		backdrop-filter: blur(10px);
+		border-bottom: 1px solid var(--border-color);
+		position: sticky;
+		top: 0;
+		z-index: 100;
+		padding: 16px 0;
+	}
+
+	.nav-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.logo {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		font-size: 24px;
+		font-weight: 700;
+		background: var(--gradient-main);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	.nav-links {
+		display: flex;
+		gap: 32px;
+		align-items: center;
+	}
+
+	.nav-links a {
+		color: var(--text-dark);
+		font-weight: 500;
+	}
+
+	.nav-links a:hover {
+		color: var(--primary-color);
+	}
+
+	.hero {
+		padding: 80px 0;
+		background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+	}
+
+	.hero-content {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 60px;
+		align-items: center;
+	}
+
+	.hero-text h1 {
+		font-size: 56px;
+		font-weight: 800;
+		line-height: 1.1;
+		margin-bottom: 24px;
+		background: var(--gradient-main);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	.hero-subtitle {
+		font-size: 20px;
+		color: var(--text-light);
+		margin-bottom: 32px;
+		line-height: 1.6;
+	}
+
+	.hero-cta {
+		display: flex;
+		gap: 16px;
+		margin-bottom: 24px;
+	}
+
+	.hero-badges {
+		display: flex;
+		gap: 12px;
+	}
+
+	.badge {
+		padding: 6px 16px;
+		background: rgba(99, 102, 241, 0.1);
+		color: var(--primary-color);
+		border-radius: 20px;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.app-screenshot {
+		position: relative;
+		background: white;
+		border-radius: 16px;
+		box-shadow: var(--shadow-xl);
+		overflow: hidden;
+		border: 8px solid #1f2937;
+		transform: perspective(1000px) rotateY(-5deg) rotateX(2deg);
+		transition: transform 0.3s ease;
+	}
+
+	.app-screenshot:hover {
+		transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+	}
+
+	.app-screenshot img {
+		width: 100%;
+		height: auto;
+		display: block;
+	}
+
+	.screenshot-overlay {
+		position: absolute;
+		top: 16px;
+		right: 16px;
+	}
+
+	.screenshot-badge {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 16px;
+		background: rgba(255, 255, 255, 0.95);
+		border-radius: 20px;
+		box-shadow: var(--shadow-md);
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--text-dark);
+	}
+
+	.badge-dot {
+		width: 8px;
+		height: 8px;
+		background: #10b981;
+		border-radius: 50%;
+		animation: pulse 2s ease-in-out infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.5;
+		}
+	}
+
+	.screenshot-section {
+		padding: 80px 0;
+		background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+	}
+
+	.screenshot-container {
+		display: grid;
+		grid-template-columns: 1.2fr 0.8fr;
+		gap: 60px;
+		align-items: center;
+	}
+
+	.screenshot-frame {
+		position: relative;
+		background: #1f2937;
+		border-radius: 12px;
+		padding: 12px;
+		box-shadow: var(--shadow-xl);
+		transform: perspective(1000px) rotateY(-3deg) rotateX(2deg);
+		transition: transform 0.3s ease;
+	}
+
+	.screenshot-frame:hover {
+		transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+	}
+
+	.screenshot-frame img {
+		width: 100%;
+		height: auto;
+		display: block;
+		border-radius: 8px;
+	}
+
+	.frame-decoration {
+		position: absolute;
+		top: 20px;
+		left: 20px;
+		display: flex;
+		gap: 8px;
+	}
+
+	.frame-dot {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+	}
+
+	.frame-dot-red {
+		background: #ef4444;
+	}
+
+	.frame-dot-yellow {
+		background: #f59e0b;
+	}
+
+	.frame-dot-green {
+		background: #10b981;
+	}
+
+	.screenshot-info h2 {
+		font-size: 36px;
+		font-weight: 700;
+		margin-bottom: 20px;
+		color: var(--text-dark);
+	}
+
+	.screenshot-info p {
+		font-size: 18px;
+		color: var(--text-light);
+		line-height: 1.7;
+		margin-bottom: 32px;
+	}
+
+	.screenshot-features {
+		list-style: none;
+		display: grid;
+		gap: 16px;
+	}
+
+	.screenshot-features li {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		font-size: 16px;
+		color: var(--text-dark);
+		font-weight: 500;
+	}
+
+	.screenshot-features svg {
+		flex-shrink: 0;
+		color: #10b981;
+	}
+
+	.features {
+		padding: 100px 0;
+		background: white;
+	}
+
+	.section-header {
+		text-align: center;
+		margin-bottom: 60px;
+	}
+
+	.section-header h2 {
+		font-size: 42px;
+		font-weight: 700;
+		margin-bottom: 16px;
+		color: var(--text-dark);
+	}
+
+	.section-header p {
+		font-size: 18px;
+		color: var(--text-light);
+	}
+
+	.features-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 32px;
+	}
+
+	.feature-card {
+		padding: 32px;
+		background: white;
+		border-radius: 16px;
+		border: 1px solid var(--border-color);
+		transition: all 0.3s ease;
+	}
+
+	.feature-card:hover {
+		transform: translateY(-4px);
+		box-shadow: var(--shadow-lg);
+		border-color: var(--primary-color);
+	}
+
+	.feature-icon {
+		margin-bottom: 20px;
+	}
+
+	.feature-card h3 {
+		font-size: 20px;
+		font-weight: 600;
+		margin-bottom: 12px;
+		color: var(--text-dark);
+	}
+
+	.feature-card p {
+		color: var(--text-light);
+		line-height: 1.6;
+	}
+
+	.how-it-works {
+		padding: 100px 0;
+		background: var(--bg-light);
+	}
+
+	.steps {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 24px;
+	}
+
+	.step {
+		flex: 1;
+		text-align: center;
+		padding: 32px;
+		background: white;
+		border-radius: 16px;
+		box-shadow: var(--shadow-md);
+	}
+
+	.step-number {
+		width: 60px;
+		height: 60px;
+		margin: 0 auto 20px;
+		background: var(--gradient-main);
+		color: white;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 28px;
+		font-weight: 700;
+	}
+
+	.step h3 {
+		font-size: 20px;
+		font-weight: 600;
+		margin-bottom: 12px;
+		color: var(--text-dark);
+	}
+
+	.step p {
+		color: var(--text-light);
+		line-height: 1.6;
+	}
+
+	.step-arrow {
+		font-size: 32px;
+		color: var(--primary-color);
+		font-weight: 700;
+	}
+
+	.tech-stack {
+		padding: 100px 0;
+		background: white;
+	}
+
+	.tech-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 32px;
+	}
+
+	.tech-item {
+		text-align: center;
+		padding: 32px;
+		background: var(--bg-light);
+		border-radius: 12px;
+	}
+
+	.tech-icon {
+		font-size: 48px;
+		margin-bottom: 16px;
+	}
+
+	.tech-item h4 {
+		font-size: 18px;
+		font-weight: 600;
+		margin-bottom: 8px;
+		color: var(--text-dark);
+	}
+
+	.tech-item p {
+		color: var(--text-light);
+		font-size: 14px;
+	}
+
+	.footer {
+		background: var(--text-dark);
+		color: white;
+		padding: 60px 0 20px;
+	}
+
+	.footer-content {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 40px;
+		margin-bottom: 40px;
+	}
+
+	.footer-section h4 {
+		font-size: 18px;
+		font-weight: 600;
+		margin-bottom: 16px;
+	}
+
+	.footer-section p {
+		color: rgba(255, 255, 255, 0.7);
+		line-height: 1.6;
+		margin-bottom: 12px;
+	}
+
+	.footer-section a {
+		display: block;
+		color: rgba(255, 255, 255, 0.7);
+		margin-bottom: 8px;
+	}
+
+	.footer-section a:hover {
+		color: white;
+	}
+
+	.footer-bottom {
+		text-align: center;
+		padding-top: 20px;
+		border-top: 1px solid rgba(255, 255, 255, 0.1);
+		color: rgba(255, 255, 255, 0.5);
+	}
+
+	@media (max-width: 768px) {
+		.hero-content {
+			grid-template-columns: 1fr;
+		}
+
+		.hero-text h1 {
+			font-size: 36px;
+		}
+
+		.screenshot-container {
+			grid-template-columns: 1fr;
+			gap: 40px;
+		}
+
+		.screenshot-frame {
+			transform: none;
+		}
+
+		.screenshot-frame:hover {
+			transform: none;
+		}
+
+		.screenshot-info h2 {
+			font-size: 28px;
+		}
+
+		.features-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.steps {
+			flex-direction: column;
+		}
+
+		.step-arrow {
+			transform: rotate(90deg);
+		}
+
+		.tech-grid {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		.footer-content {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

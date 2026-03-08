@@ -31,7 +31,7 @@ export interface VideoFilter {
 }
 
 export interface AppSettings {
-  api_provider: 'openai' | 'gemini';
+  api_provider: string; // 'gemini' | 'openai' | 'deepseek' | 'anthropic' | 'openrouter' | 'custom' | any
   api_endpoint: string;
   api_key: string;
   model: string;

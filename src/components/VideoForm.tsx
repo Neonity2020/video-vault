@@ -26,6 +26,8 @@ export default function VideoForm({ video, onSave, onClose, saving, allTags = []
     const [fetchSuccess, setFetchSuccess] = useState(false);
     const [tagInput, setTagInput] = useState('');
     const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+    const [generatingTags, setGeneratingTags] = useState(false);
+    const [tagError, setTagError] = useState('');
     const isEdit = !!video?.id;
 
     useEffect(() => {
@@ -86,6 +88,32 @@ export default function VideoForm({ video, onSave, onClose, saving, allTags = []
     };
 
     const canFetch = form.url && (form.video_type === 'youtube' || form.video_type === 'bilibili');
+
+    const handleGenerateTags = async () => {
+        if (!form.title && !form.description) {
+            setTagError('请先填写标题或描述');
+            return;
+        }
+
+        setGeneratingTags(true);
+        setTagError('');
+        try {
+            const tags = await invoke<string[]>('generate_ai_tags', {
+                title: form.title || '',
+                description: form.description || '',
+                transcript: '', // Empty for new videos
+            });
+
+            // Merge with existing tags, avoiding duplicates
+            const existingTags = form.tags || [];
+            const newTags = tags.filter((tag) => !existingTags.includes(tag));
+            setForm((prev) => ({ ...prev, tags: [...existingTags, ...newTags] }));
+        } catch (err: any) {
+            setTagError(err?.toString() || '生成标签失败');
+        } finally {
+            setGeneratingTags(false);
+        }
+    };
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -221,7 +249,42 @@ export default function VideoForm({ video, onSave, onClose, saving, allTags = []
 
                         {/* Tags */}
                         <div className="form-group">
-                            <label className="form-label">标签</label>
+                            <label className="form-label">
+                                标签
+                                <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    onClick={handleGenerateTags}
+                                    disabled={generatingTags || (!form.title && !form.description)}
+                                    style={{
+                                        marginLeft: 12,
+                                        padding: '4px 12px',
+                                        fontSize: 12,
+                                        borderRadius: 6,
+                                        border: '1px solid var(--accent)',
+                                        background: generatingTags ? 'var(--bg-tertiary)' : 'rgba(99, 102, 241, 0.1)',
+                                        color: generatingTags ? 'var(--text-muted)' : 'var(--accent)',
+                                        cursor: generatingTags || (!form.title && !form.description) ? 'not-allowed' : 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                    }}
+                                >
+                                    {generatingTags ? (
+                                        <>
+                                            <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }}></span>
+                                            生成中...
+                                        </>
+                                    ) : (
+                                        <>✨ AI 生成标签</>
+                                    )}
+                                </button>
+                            </label>
+                            {tagError && (
+                                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--danger)' }}>
+                                    ⚠️ {tagError}
+                                </div>
+                            )}
                             <div className="tag-input-area">
                                 {form.tags.map((tag) => (
                                     <span key={tag} className="tag-chip">
