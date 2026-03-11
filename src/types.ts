@@ -10,12 +10,15 @@ export interface Video {
   description: string;
   duration: string;
   thumbnail: string;
+  cover_path?: string;
   ai_summary: string;
   ai_summary_en: string;
   transcript: string;
   timestamps: string;
+  note_path?: string;
   rating: number;
   is_watched: number;
+  deleted_at?: string;
   created_at?: string;
   updated_at?: string;
   tags: string[];
@@ -28,6 +31,7 @@ export interface VideoFilter {
   video_type?: string;
   is_watched?: number;
   tags?: string[];
+  include_deleted?: boolean;
 }
 
 export interface AppSettings {
@@ -67,4 +71,36 @@ export const VIDEO_TYPE_ICONS: Record<string, string> = {
   local: '📁',
   youtube: '▶️',
   bilibili: '📺',
+};
+
+export interface CalendarEvent {
+  id?: number;
+  title: string;
+  description: string;
+  event_date: string; // YYYY-MM-DD
+  event_time: string; // HH:MM
+  duration_minutes?: number;
+  repeat_type: 'none' | 'daily' | 'weekly' | 'monthly';
+  repeat_until?: string; // YYYY-MM-DD
+  reminder_minutes?: number;
+  video_id?: number;
+  completed: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const DEFAULT_CALENDAR_EVENT: CalendarEvent = {
+  title: '',
+  description: '',
+  event_date: new Date().toISOString().split('T')[0],
+  event_time: '',
+  repeat_type: 'none',
+  completed: 0,
+};
+
+export const REPEAT_TYPE_LABELS: Record<string, string> = {
+  none: '不重复',
+  daily: '每天',
+  weekly: '每周',
+  monthly: '每月',
 };

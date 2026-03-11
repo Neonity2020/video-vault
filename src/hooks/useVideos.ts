@@ -156,6 +156,60 @@ export function useVideos() {
         }
     }, []);
 
+    const generateObsidianNote = useCallback(async (videoId: number): Promise<string> => {
+        try {
+            const content = await invoke<string>('generate_obsidian_note', { videoId });
+            await fetchVideos();
+            return content;
+        } catch (err) {
+            console.error('Failed to generate Obsidian note:', err);
+            throw err;
+        }
+    }, [fetchVideos]);
+
+    const openNotesDir = useCallback(async (videoId: number, notePath: string): Promise<void> => {
+        try {
+            await invoke('open_notes_dir', { videoId, notePath });
+        } catch (err) {
+            console.error('Failed to open notes directory:', err);
+            throw err;
+        }
+    }, []);
+
+    const restoreVideo = useCallback(async (id: number) => {
+        try {
+            await invoke('restore_video', { id });
+            await fetchVideos();
+            await fetchMeta();
+        } catch (err) {
+            console.error('Failed to restore video:', err);
+            throw err;
+        }
+    }, [fetchVideos, fetchMeta]);
+
+    const permanentDeleteVideo = useCallback(async (id: number) => {
+        try {
+            await invoke('permanent_delete_video', { id });
+            await fetchVideos();
+            await fetchMeta();
+        } catch (err) {
+            console.error('Failed to permanently delete video:', err);
+            throw err;
+        }
+    }, [fetchVideos, fetchMeta]);
+
+    const emptyRecycleBin = useCallback(async () => {
+        try {
+            const count = await invoke<number>('empty_recycle_bin');
+            await fetchVideos();
+            await fetchMeta();
+            return count;
+        } catch (err) {
+            console.error('Failed to empty recycle bin:', err);
+            throw err;
+        }
+    }, [fetchVideos, fetchMeta]);
+
     return {
         videos,
         totalVideoCount,
@@ -170,6 +224,9 @@ export function useVideos() {
         addVideo,
         updateVideo,
         deleteVideo,
+        restoreVideo,
+        permanentDeleteVideo,
+        emptyRecycleBin,
         toggleWatched,
         summarizeVideo,
         translateSummary,
@@ -177,6 +234,8 @@ export function useVideos() {
         updateVideoTranscript,
         updateVideoTimestamps,
         getVideo,
+        generateObsidianNote,
+        openNotesDir,
     };
 }
 

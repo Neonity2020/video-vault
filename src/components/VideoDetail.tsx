@@ -15,6 +15,11 @@ interface VideoDetailProps {
     onToggleWatched: () => void;
     onUpdateTranscript: (transcript: string) => void;
     onUpdateTimestamps: (timestamps: string) => void;
+    onAddToCalendar?: () => void;
+    isVideoInCalendar?: boolean;
+    onGenerateNote: () => void;
+    onOpenNotesDir: () => void;
+    generatingNote: boolean;
     summarizing: boolean;
     translating: boolean;
     translatingTimestamps: boolean;
@@ -33,6 +38,11 @@ export default function VideoDetail({
     onToggleWatched,
     onUpdateTranscript,
     onUpdateTimestamps,
+    onAddToCalendar,
+    isVideoInCalendar,
+    onGenerateNote,
+    onOpenNotesDir,
+    generatingNote,
     summarizing,
     translating,
     translatingTimestamps,
@@ -471,6 +481,67 @@ export default function VideoDetail({
                     </div>
                 </div>
 
+                    <div className="detail-section">
+                        <div className="ai-summary-section">
+                            <div className="ai-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <span className="sparkle">📓</span>
+                                    <h3>Obsidian 笔记</h3>
+                                </div>
+                                {video.note_path && !generatingNote && (
+                                    <button
+                                        className="btn btn-ghost btn-sm"
+                                        onClick={onOpenNotesDir}
+                                        title="在文件管理器中打开笔记目录"
+                                    >
+                                        📂 打开目录
+                                    </button>
+                                )}
+                            </div>
+                            {generatingNote ? (
+                                <div className="ai-loading" style={{ marginTop: 12 }}>
+                                    <div className="spinner"></div>
+                                    <span>正在生成 Obsidian 笔记...</span>
+                                </div>
+                            ) : video.note_path ? (
+                                <div style={{ marginTop: 12 }}>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 8,
+                                        padding: '10px 14px',
+                                        borderRadius: 'var(--radius-md)',
+                                        background: 'rgba(16, 185, 129, 0.08)',
+                                        border: '1px solid rgba(16, 185, 129, 0.2)',
+                                        marginBottom: 12,
+                                    }}>
+                                        <span style={{ color: 'var(--success)' }}>✓</span>
+                                        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                            笔记已生成，可用 Obsidian 打开
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <button
+                                            className="btn btn-primary btn-sm"
+                                            onClick={onGenerateNote}
+                                        >
+                                            🔄 重新生成
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, marginTop: 12 }}>
+                                    <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                                        尚未生成 Obsidian 笔记，点击下方按钮 AI 智能生成
+                                    </p>
+                                    <button className="btn btn-primary btn-sm" onClick={onGenerateNote}>
+                                        📓 生成 Obsidian 笔记
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                 <div className="detail-actions">
                     <button className="btn btn-secondary" onClick={onToggleWatched}>
                         {video.is_watched ? '⏳ 标为未看' : '✅ 标为已看'}
@@ -478,6 +549,14 @@ export default function VideoDetail({
                     <button className="btn btn-secondary" onClick={onEdit}>
                         ✏️ 编辑
                     </button>
+                    {onAddToCalendar && (
+                        <button
+                            className={`btn ${isVideoInCalendar ? 'btn-success' : 'btn-secondary'}`}
+                            onClick={onAddToCalendar}
+                        >
+                            {isVideoInCalendar ? '✓ 已在日历中' : '📅 添加到日历'}
+                        </button>
+                    )}
                     {!showDeleteConfirm ? (
                         <button className="btn btn-danger" onClick={() => setShowDeleteConfirm(true)}>
                             🗑️ 删除

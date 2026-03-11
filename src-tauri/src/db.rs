@@ -15,12 +15,15 @@ pub struct Video {
     pub description: String,
     pub duration: String,
     pub thumbnail: String,
+    pub cover_path: Option<String>, // Local path to downloaded cover image
     pub ai_summary: String,
     pub ai_summary_en: String,
     pub transcript: String,
     pub timestamps: String,
+    pub note_path: Option<String>,
     pub rating: i32,
     pub is_watched: i32,
+    pub deleted_at: Option<String>, // For recycle bin functionality
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
     #[serde(default)]
@@ -41,6 +44,7 @@ pub struct VideoFilter {
     pub video_type: Option<String>,
     pub is_watched: Option<i32>,
     pub tags: Option<Vec<String>>,
+    pub include_deleted: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -49,6 +53,23 @@ pub struct AppSettings {
     pub api_endpoint: String,
     pub api_key: String,
     pub model: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CalendarEvent {
+    pub id: Option<i64>,
+    pub title: String,
+    pub description: String,
+    pub event_date: String,  // 格式: "YYYY-MM-DD"
+    pub event_time: String,  // 格式: "HH:MM"
+    pub duration_minutes: Option<i32>,
+    pub repeat_type: String, // "none", "daily", "weekly", "monthly"
+    pub repeat_until: Option<String>, // 格式: "YYYY-MM-DD"
+    pub reminder_minutes: Option<i64>,
+    pub video_id: Option<i64>,
+    pub completed: i32,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -134,6 +155,47 @@ pub fn init_db(app_data_dir: &std::path::Path) -> Connection {
         "ALTER TABLE videos ADD COLUMN timestamps TEXT DEFAULT ''",
         [],
     );
+    // Migration: add cover_path column for existing databases
+    let _ = conn.execute(
+        "ALTER TABLE videos ADD COLUMN cover_path TEXT",
+        [],
+    );
+    // Migration: add deleted_at column for existing databases (recycle bin)
+    let _ = conn.execute(
+        "ALTER TABLE videos ADD COLUMN deleted_at TEXT",
+        [],
+    );
+    // Migration: add note_path column for Obsidian notes
+    let _ = conn.execute(
+        "ALTER TABLE videos ADD COLUMN note_path TEXT",
+        [],
+    );
+
+    // Create calendar_events table
+    conn.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS calendar_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            event_date TEXT NOT NULL,
+            event_time TEXT DEFAULT '',
+            duration_minutes INTEGER DEFAULT NULL,
+            repeat_type TEXT DEFAULT 'none',
+            repeat_until TEXT DEFAULT NULL,
+            reminder_minutes INTEGER DEFAULT NULL,
+            video_id INTEGER DEFAULT NULL,
+            completed INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE SET NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_calendar_events_date ON calendar_events(event_date);
+        CREATE INDEX IF NOT EXISTS idx_calendar_events_video ON calendar_events(video_id);
+        ",
+    )
+    .expect("Failed to create calendar_events table");
 
     conn
 }

@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { useVideos, useSettings } from './hooks/useVideos';
-import { Video, VideoFilter } from './types';
+import { useReminders } from './hooks/useReminders';
+import { Video, VideoFilter, CalendarEvent } from './types';
 import Sidebar from './components/Sidebar';
 import SearchBar from './components/SearchBar';
 import VideoGrid from './components/VideoGrid';
 import VideoDetail from './components/VideoDetail';
 import VideoForm from './components/VideoForm';
 import Settings from './components/Settings';
+import Calendar from './components/Calendar';
+import RecycleBin from './components/RecycleBin';
+import QuickAddToCalendarModal from './components/QuickAddToCalendarModal';
 import './index.css';
 
 interface Toast {
@@ -28,6 +33,9 @@ export default function App() {
     addVideo,
     updateVideo,
     deleteVideo,
+    restoreVideo,
+    permanentDeleteVideo,
+    emptyRecycleBin,
     toggleWatched,
     summarizeVideo,
     translateSummary,
@@ -35,8 +43,11 @@ export default function App() {
     updateVideoTranscript,
     updateVideoTimestamps,
     getVideo,
+    generateObsidianNote,
+    openNotesDir,
   } = useVideos();
   const { settings, loading: savingSettings, saveSettings } = useSettings();
+  useReminders(); // Enable reminder notifications
 
   const [activeView, setActiveView] = useState('all');
   const [search, setSearch] = useState('');
@@ -53,7 +64,12 @@ export default function App() {
   const [fetchingTranscript, setFetchingTranscript] = useState(false);
   const [savingTimestamps, setSavingTimestamps] = useState(false);
   const [translatingTimestamps, setTranslatingTimestamps] = useState(false);
+  const [generatingNote, setGeneratingNote] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+  const [calendarInitialDate, setCalendarInitialDate] = useState<string | null>(null);
+  const [calendarInitialEvent, setCalendarInitialEvent] = useState<CalendarEvent | null>(null);
+  const [videosInCalendar, setVideosInCalendar] = useState<Set<number>>(new Set());
 
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     setToast({ message, type });
@@ -75,6 +91,11 @@ export default function App() {
       filter.video_type = filterType;
     }
 
+    // Handle recycle bin view
+    if (activeView === 'recycle-bin') {
+      filter.include_deleted = true;
+    }
+
     fetchVideos(filter);
   }, [search, filterAuthor, filterTopic, filterType, filterTag, activeView, fetchVideos]);
 
@@ -85,6 +106,30 @@ export default function App() {
   useEffect(() => {
     fetchMeta();
   }, [fetchMeta]);
+
+  // Check if video is in calendar when selectedVideo changes
+  useEffect(() => {
+    const checkVideoInCalendar = async () => {
+      if (selectedVideo?.id !== undefined) {
+        const videoId = selectedVideo.id;
+        try {
+          const isInCalendar = await invoke<boolean>('is_video_in_calendar', { videoId });
+          if (isInCalendar) {
+            setVideosInCalendar(prev => new Set(prev).add(videoId));
+          } else {
+            setVideosInCalendar(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(videoId);
+              return newSet;
+            });
+          }
+        } catch (err) {
+          console.error('Failed to check if video is in calendar:', err);
+        }
+      }
+    };
+    checkVideoInCalendar();
+  }, [selectedVideo]);
 
   const handleNavigate = (view: string) => {
     setActiveView(view);
@@ -225,8 +270,127 @@ export default function App() {
     }
   };
 
+  const handleGenerateNote = async () => {
+    if (!selectedVideo?.id) return;
+    setGeneratingNote(true);
+    try {
+      await generateObsidianNote(selectedVideo.id);
+      const updatedVideo = await getVideo(selectedVideo.id);
+      if (updatedVideo) {
+        setSelectedVideo(updatedVideo);
+      }
+      showToast('Obsidian 笔记已生成');
+    } catch (err: any) {
+      showToast(err?.toString() || 'Obsidian 笔记生成失败', 'error');
+    } finally {
+      setGeneratingNote(false);
+    }
+  };
+
+  const handleOpenNotesDir = async () => {
+    if (!selectedVideo?.id || !selectedVideo?.note_path) return;
+    try {
+      await openNotesDir(selectedVideo.id, selectedVideo.note_path);
+    } catch (err: any) {
+      showToast(err?.toString() || '打开笔记目录失败', 'error');
+    }
+  };
+
+  const handleAddToCalendar = async () => {
+    if (!selectedVideo?.id) return;
+
+    // Check if video is already in calendar
+    if (videosInCalendar.has(selectedVideo.id)) {
+      try {
+        const event = await invoke<CalendarEvent>('get_video_calendar_event', { videoId: selectedVideo.id });
+        if (event) {
+          setCalendarInitialEvent(event);
+          setActiveView('calendar');
+          setSelectedVideo(null);
+        }
+      } catch (err) {
+        console.error('Failed to get video calendar event:', err);
+        showToast('获取日历事件失败', 'error');
+      }
+    } else {
+      // Show quick add modal
+      setShowQuickAddModal(true);
+    }
+  };
+
+  const handleQuickAddSuccess = (selectedDate?: string) => {
+    showToast('已添加到学习日历');
+    // Mark the video as being in calendar
+    if (selectedVideo?.id !== undefined) {
+      setVideosInCalendar(prev => new Set(prev).add(selectedVideo.id!));
+    }
+    setSelectedVideo(null);
+    if (selectedDate) {
+      setCalendarInitialDate(selectedDate);
+    }
+    setActiveView('calendar');
+  };
+
+  const handleCalendarInitialDateUsed = () => {
+    setCalendarInitialDate(null);
+    setCalendarInitialEvent(null);
+  };
+
+  const handleCalendarVideoClick = async (videoId: number) => {
+    try {
+      // Try to get video from current list first
+      const video = videos.find((v) => v.id === videoId);
+
+      if (video) {
+        setSelectedVideo(video);
+      } else {
+        // If not in current list, fetch it directly
+        const fetchedVideo = await getVideo(videoId);
+        setSelectedVideo(fetchedVideo);
+      }
+
+      // Switch back to video view
+      setActiveView('all');
+    } catch (err) {
+      console.error('Failed to load video:', err);
+      showToast('无法加载视频', 'error');
+    }
+  };
+
+  const handleRestoreVideo = async (id: number) => {
+    try {
+      await restoreVideo(id);
+      showToast('视频已恢复');
+    } catch (err: any) {
+      showToast(err?.toString() || '恢复失败', 'error');
+    }
+  };
+
+  const handlePermanentDelete = async (id: number) => {
+    if (confirm('确定要永久删除这个视频吗？此操作无法撤销！')) {
+      try {
+        await permanentDeleteVideo(id);
+        showToast('视频已永久删除');
+      } catch (err: any) {
+        showToast(err?.toString() || '删除失败', 'error');
+      }
+    }
+  };
+
+  const handleEmptyRecycleBin = async () => {
+    if (confirm('确定要清空回收站吗？此操作将永久删除所有已删除的视频，无法撤销！')) {
+      try {
+        const count = await emptyRecycleBin();
+        showToast(`已清空回收站，删除了 ${count} 个视频`);
+      } catch (err: any) {
+        showToast(err?.toString() || '清空回收站失败', 'error');
+      }
+    }
+  };
+
   const getHeaderTitle = () => {
     if (activeView === 'settings') return '设置';
+    if (activeView === 'recycle-bin') return '回收站';
     if (activeView.startsWith('type:')) {
       const t = activeView.replace('type:', '');
       return t === 'local' ? '本地视频' : t === 'youtube' ? 'YouTube' : 'Bilibili';
@@ -282,6 +446,20 @@ export default function App() {
               onSave={saveSettings}
               saving={savingSettings}
             />
+          ) : activeView === 'calendar' ? (
+            <Calendar
+              initialDate={calendarInitialDate}
+              onInitialDateUsed={handleCalendarInitialDateUsed}
+              onVideoClick={handleCalendarVideoClick}
+              initialEvent={calendarInitialEvent}
+            />
+          ) : activeView === 'recycle-bin' ? (
+            <RecycleBin
+              videos={videos}
+              onRestore={handleRestoreVideo}
+              onPermanentDelete={handlePermanentDelete}
+              onEmptyRecycleBin={handleEmptyRecycleBin}
+            />
           ) : (
             <VideoGrid
               videos={videos}
@@ -305,6 +483,11 @@ export default function App() {
           onToggleWatched={handleToggleWatched}
           onUpdateTranscript={handleUpdateTranscript}
           onUpdateTimestamps={handleUpdateTimestamps}
+          onAddToCalendar={handleAddToCalendar}
+          isVideoInCalendar={selectedVideo.id !== undefined && videosInCalendar.has(selectedVideo.id)}
+          onGenerateNote={handleGenerateNote}
+          onOpenNotesDir={handleOpenNotesDir}
+          generatingNote={generatingNote}
           summarizing={summarizing}
           translating={translating}
           translatingTimestamps={translatingTimestamps}
@@ -320,6 +503,16 @@ export default function App() {
           onClose={() => { setShowForm(false); setEditingVideo(undefined); }}
           saving={formSaving}
           allTags={allTags}
+        />
+      )}
+
+      {showQuickAddModal && selectedVideo?.id && (
+        <QuickAddToCalendarModal
+          videoId={selectedVideo.id}
+          videoTitle={selectedVideo.title}
+          videoAuthor={selectedVideo.author}
+          onClose={() => setShowQuickAddModal(false)}
+          onSuccess={handleQuickAddSuccess}
         />
       )}
 
