@@ -13,6 +13,7 @@ pub struct Video {
     pub author_url: String,
     pub topic: String,
     pub description: String,
+    pub description_en: String,
     pub duration: String,
     pub thumbnail: String,
     pub cover_path: Option<String>, // Local path to downloaded cover image
@@ -104,6 +105,7 @@ pub fn init_db(app_data_dir: &std::path::Path) -> Connection {
             author_url TEXT DEFAULT '',
             topic TEXT NOT NULL DEFAULT 'General',
             description TEXT DEFAULT '',
+            description_en TEXT DEFAULT '',
             duration TEXT DEFAULT '',
             thumbnail TEXT DEFAULT '',
             ai_summary TEXT DEFAULT '',
@@ -143,6 +145,11 @@ pub fn init_db(app_data_dir: &std::path::Path) -> Connection {
     // Migration: add ai_summary_en column for existing databases
     let _ = conn.execute(
         "ALTER TABLE videos ADD COLUMN ai_summary_en TEXT DEFAULT ''",
+        [],
+    );
+    // Migration: add description_en column for existing databases
+    let _ = conn.execute(
+        "ALTER TABLE videos ADD COLUMN description_en TEXT DEFAULT ''",
         [],
     );
     // Migration: add transcript column for existing databases

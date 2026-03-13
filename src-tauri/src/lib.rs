@@ -39,6 +39,7 @@ pub fn run() {
             commands::save_settings,
             commands::summarize_video,
             commands::translate_summary,
+            commands::translate_description,
             commands::toggle_watched,
             commands::get_all_tags,
             commands::set_video_tags,

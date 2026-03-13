@@ -11,6 +11,7 @@ interface VideoDetailProps {
     onDelete: () => void;
     onSummarize: () => void;
     onTranslate: () => void;
+    onTranslateDescription: () => void;
     onTranslateTimestamps: () => void;
     onToggleWatched: () => void;
     onUpdateTranscript: (transcript: string) => void;
@@ -22,6 +23,7 @@ interface VideoDetailProps {
     generatingNote: boolean;
     summarizing: boolean;
     translating: boolean;
+    translatingDescription: boolean;
     translatingTimestamps: boolean;
     savingTranscript: boolean;
     savingTimestamps: boolean;
@@ -34,6 +36,7 @@ export default function VideoDetail({
     onDelete,
     onSummarize,
     onTranslate,
+    onTranslateDescription,
     onTranslateTimestamps,
     onToggleWatched,
     onUpdateTranscript,
@@ -45,12 +48,14 @@ export default function VideoDetail({
     generatingNote,
     summarizing,
     translating,
+    translatingDescription,
     translatingTimestamps,
     savingTranscript,
     savingTimestamps,
 }: VideoDetailProps) {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showEnglish, setShowEnglish] = useState(false);
+    const [showEnglishDescription, setShowEnglishDescription] = useState(false);
     const [showTranscript, setShowTranscript] = useState(false);
     const [isEditingTranscript, setIsEditingTranscript] = useState(false);
     const [tempTranscript, setTempTranscript] = useState(video.transcript || '');
@@ -71,6 +76,10 @@ export default function VideoDetail({
     const displayedSummary = showEnglish && video.ai_summary_en
         ? video.ai_summary_en
         : video.ai_summary;
+
+    const displayedDescription = showEnglishDescription && video.description_en
+        ? video.description_en
+        : video.description;
 
     const renderTimestamps = (text: string) => {
         // Match HH:MM:SS or MM:SS
@@ -172,8 +181,28 @@ export default function VideoDetail({
 
                     {video.description && (
                         <div className="detail-section">
-                            <div className="detail-section-title">描述</div>
-                            <div className="detail-section-content">{video.description}</div>
+                            <div className="detail-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>描述</span>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    {video.description_en ? (
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={() => setShowEnglishDescription(!showEnglishDescription)}
+                                        >
+                                            {showEnglishDescription ? '🌐 切换为中文' : '🌐 切换为英文'}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={onTranslateDescription}
+                                            disabled={translatingDescription}
+                                        >
+                                            {translatingDescription ? '🌐 翻译中...' : '🌐 翻译为中文'}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="detail-section-content" style={{ whiteSpace: 'pre-wrap' }}>{displayedDescription}</div>
                         </div>
                     )}
 

@@ -14,19 +14,20 @@ fn row_to_video(row: &rusqlite::Row) -> rusqlite::Result<Video> {
         author_url: row.get::<_, Option<String>>(6)?.unwrap_or_default(),
         topic: row.get(7)?,
         description: row.get(8)?,
-        duration: row.get(9)?,
-        thumbnail: row.get(10)?,
-        cover_path: row.get(11)?,
-        ai_summary: row.get(12)?,
-        ai_summary_en: row.get::<_, Option<String>>(13)?.unwrap_or_default(),
-        transcript: row.get::<_, Option<String>>(14)?.unwrap_or_default(),
-        timestamps: row.get::<_, Option<String>>(15)?.unwrap_or_default(),
-        note_path: row.get(16)?,
-        rating: row.get(17)?,
-        is_watched: row.get(18)?,
-        deleted_at: row.get(19)?,
-        created_at: row.get(20)?,
-        updated_at: row.get(21)?,
+        description_en: row.get::<_, Option<String>>(9)?.unwrap_or_default(),
+        duration: row.get(10)?,
+        thumbnail: row.get(11)?,
+        cover_path: row.get(12)?,
+        ai_summary: row.get(13)?,
+        ai_summary_en: row.get::<_, Option<String>>(14)?.unwrap_or_default(),
+        transcript: row.get::<_, Option<String>>(15)?.unwrap_or_default(),
+        timestamps: row.get::<_, Option<String>>(16)?.unwrap_or_default(),
+        note_path: row.get(17)?,
+        rating: row.get(18)?,
+        is_watched: row.get(19)?,
+        deleted_at: row.get(20)?,
+        created_at: row.get(21)?,
+        updated_at: row.get(22)?,
         tags: Vec::new(),
     })
 }
@@ -160,10 +161,10 @@ pub fn add_video(state: State<DbState>, app: tauri::AppHandle, video: Video) -> 
     };
 
     db.execute(
-        "INSERT INTO videos (title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+        "INSERT INTO videos (title, video_type, file_path, url, author, author_url, topic, description, description_en, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
         rusqlite::params![
             video.title, video.video_type, video.file_path, video.url,
-            video.author, video.author_url, video.topic, video.description, video.duration,
+            video.author, video.author_url, video.topic, video.description, video.description_en, video.duration,
             video.thumbnail, cover_path, video.ai_summary, video.ai_summary_en, video.transcript, video.timestamps, video.note_path, video.rating, video.is_watched,
         ],
     ).map_err(|e| e.to_string())?;
@@ -195,10 +196,10 @@ pub fn update_video(state: State<DbState>, app: tauri::AppHandle, video: Video) 
     };
 
     db.execute(
-        "UPDATE videos SET title=?1, video_type=?2, file_path=?3, url=?4, author=?5, author_url=?6, topic=?7, description=?8, duration=?9, thumbnail=?10, cover_path=?11, ai_summary=?12, ai_summary_en=?13, transcript=?14, timestamps=?15, note_path=?16, rating=?17, is_watched=?18, updated_at=CURRENT_TIMESTAMP WHERE id=?19",
+        "UPDATE videos SET title=?1, video_type=?2, file_path=?3, url=?4, author=?5, author_url=?6, topic=?7, description=?8, description_en=?9, duration=?10, thumbnail=?11, cover_path=?12, ai_summary=?13, ai_summary_en=?14, transcript=?15, timestamps=?16, note_path=?17, rating=?18, is_watched=?19, updated_at=CURRENT_TIMESTAMP WHERE id=?20",
         rusqlite::params![
             video.title, video.video_type, video.file_path, video.url,
-            video.author, video.author_url, video.topic, video.description, video.duration,
+            video.author, video.author_url, video.topic, video.description, video.description_en, video.duration,
             video.thumbnail, cover_path, video.ai_summary, video.ai_summary_en, video.transcript, video.timestamps, video.note_path, video.rating, video.is_watched, video.id,
         ],
     ).map_err(|e| e.to_string())?;
@@ -249,12 +250,11 @@ pub fn permanent_delete_video(state: State<DbState>, app: tauri::AppHandle, id: 
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     // Get video info to delete cover image
-    let cover_path: Option<String> = db
-        .query_row("SELECT cover_path FROM videos WHERE id = ?1", rusqlite::params![id], |row| {
-            row.get(0)
+    let (cover_path, note_path): (Option<String>, Option<String>) = db
+        .query_row("SELECT cover_path, note_path FROM videos WHERE id = ?1", rusqlite::params![id], |row| {
+            Ok((row.get(0)?, row.get(1)?))
         })
-        .ok()
-        .flatten();
+        .unwrap_or((None, None));
 
     // Permanently delete from database
     db.execute("DELETE FROM videos WHERE id = ?1", rusqlite::params![id])
@@ -262,6 +262,17 @@ pub fn permanent_delete_video(state: State<DbState>, app: tauri::AppHandle, id: 
 
     // Delete cover image file
     delete_cover_image(&app, &cover_path)?;
+
+    // Delete note folder
+    if let Some(path) = note_path {
+        if let Ok(app_data_dir) = app.path().app_data_dir() {
+            let notes_dir = app_data_dir.join("notes");
+            let full_note_path = notes_dir.join(&path);
+            if let Some(folder_path) = full_note_path.parent() {
+                let _ = fs::remove_dir_all(folder_path);
+            }
+        }
+    }
 
     Ok(())
 }
@@ -272,18 +283,28 @@ pub fn empty_recycle_bin(state: State<DbState>, app: tauri::AppHandle) -> Result
 
     // Get all cover paths from deleted videos
     let mut stmt = db
-        .prepare("SELECT cover_path FROM videos WHERE deleted_at IS NOT NULL")
+        .prepare("SELECT cover_path, note_path FROM videos WHERE deleted_at IS NOT NULL")
         .map_err(|e| format!("查询回收站失败: {}", e))?;
 
-    let cover_paths: Vec<Option<String>> = stmt
-        .query_map([], |row| row.get(0))
-        .map_err(|e| format!("读取封面路径失败: {}", e))?
+    let paths: Vec<(Option<String>, Option<String>)> = stmt
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .map_err(|e| format!("读取路径失败: {}", e))?
         .collect::<Result<_, _>>()
-        .map_err(|e| format!("处理封面路径失败: {}", e))?;
+        .map_err(|e| format!("处理路径失败: {}", e))?;
 
-    // Delete all cover images
-    for cover_path in cover_paths {
+    // Delete all cover images and note folders
+    for (cover_path, note_path) in paths {
         let _ = delete_cover_image(&app, &cover_path);
+        
+        if let Some(path) = note_path {
+            if let Ok(app_data_dir) = app.path().app_data_dir() {
+                let notes_dir = app_data_dir.join("notes");
+                let full_note_path = notes_dir.join(&path);
+                if let Some(folder_path) = full_note_path.parent() {
+                    let _ = fs::remove_dir_all(folder_path);
+                }
+            }
+        }
     }
 
     // Permanently delete all videos with deleted_at set
@@ -372,7 +393,7 @@ pub fn get_videos(state: State<DbState>, filter: VideoFilter) -> Result<Vec<Vide
         format!(" WHERE {}", conditions.join(" AND "))
     };
     let query = format!(
-        "SELECT v.id, v.title, v.video_type, v.file_path, v.url, v.author, v.author_url, v.topic, v.description, v.duration, v.thumbnail, v.cover_path, v.ai_summary, v.ai_summary_en, v.transcript, v.timestamps, v.note_path, v.rating, v.is_watched, v.deleted_at, v.created_at, v.updated_at FROM videos v{}{} ORDER BY v.updated_at DESC",
+        "SELECT v.id, v.title, v.video_type, v.file_path, v.url, v.author, v.author_url, v.topic, v.description, v.description_en, v.duration, v.thumbnail, v.cover_path, v.ai_summary, v.ai_summary_en, v.transcript, v.timestamps, v.note_path, v.rating, v.is_watched, v.deleted_at, v.created_at, v.updated_at FROM videos v{}{} ORDER BY v.updated_at DESC",
         join_clause, where_clause
     );
     let param_refs: Vec<&dyn rusqlite::types::ToSql> = params.iter().map(|p| p.as_ref()).collect();
@@ -427,7 +448,7 @@ pub fn get_video_type_counts(
 pub fn get_video(state: State<DbState>, id: i64) -> Result<Option<Video>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
     let mut stmt = db
-        .prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
+        .prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, description_en, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
         .map_err(|e| e.to_string())?;
     let mut rows = stmt
         .query_map(rusqlite::params![id], row_to_video)
@@ -521,7 +542,7 @@ pub async fn summarize_video(
 ) -> Result<String, String> {
     let video = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
+        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, description_en, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
             .map_err(|e| e.to_string())?;
         let mut rows = stmt
             .query_map(rusqlite::params![video_id], row_to_video)
@@ -620,7 +641,7 @@ pub async fn summarize_video(
 pub async fn translate_summary(state: State<'_, DbState>, video_id: i64) -> Result<String, String> {
     let video = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
+        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, description_en, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
             .map_err(|e| e.to_string())?;
         let mut rows = stmt
             .query_map(rusqlite::params![video_id], row_to_video)
@@ -687,13 +708,84 @@ pub async fn translate_summary(state: State<'_, DbState>, video_id: i64) -> Resu
 }
 
 #[tauri::command]
+pub async fn translate_description(state: State<'_, DbState>, video_id: i64) -> Result<String, String> {
+    let video = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, description_en, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
+            .map_err(|e| e.to_string())?;
+        let mut rows = stmt
+            .query_map(rusqlite::params![video_id], row_to_video)
+            .map_err(|e| e.to_string())?;
+        rows.next()
+            .ok_or("Video not found".to_string())?
+            .map_err(|e| e.to_string())?
+    };
+
+    let description = video.description;
+    if description.is_empty() {
+        return Err("No description exists to translate".to_string());
+    }
+
+    let settings = {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        let mut stmt = db
+            .prepare("SELECT key, value FROM settings")
+            .map_err(|e| e.to_string())?;
+        let mut s = AppSettings::default();
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?;
+        for (key, value) in rows.flatten() {
+            match key.as_str() {
+                "api_provider" => s.api_provider = value,
+                "api_endpoint" => s.api_endpoint = value,
+                "api_key" => s.api_key = value,
+                "model" => s.model = value,
+                _ => {}
+            }
+        }
+        s
+    };
+
+    if settings.api_key.is_empty() {
+        return Err("请先在设置中配置 API Key".to_string());
+    }
+
+    let prompt = format!(
+        "Please translate the following text into fluent Chinese. Only output the translated text, do not include any other explanations or comments:\n\n{}",
+        description
+    );
+
+    let system_msg = "You are a professional translator. Translate the text directly and accurately into Chinese.";
+
+    let translated = if settings.api_provider == "gemini" {
+        call_gemini_api(&settings, system_msg, &prompt).await?
+    } else {
+        call_openai_api(&settings, system_msg, &prompt).await?
+    };
+
+    {
+        let db = state.db.lock().map_err(|e| e.to_string())?;
+        db.execute(
+            "UPDATE videos SET description = ?1, description_en = ?2, updated_at = CURRENT_TIMESTAMP WHERE id = ?3",
+            rusqlite::params![translated, description, video_id],
+        ).map_err(|e| e.to_string())?;
+    }
+
+    Ok(translated)
+}
+
+
+#[tauri::command]
 pub async fn translate_timestamps(
     state: State<'_, DbState>,
     video_id: i64,
 ) -> Result<String, String> {
     let video = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
+        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, description_en, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
             .map_err(|e| e.to_string())?;
         let mut rows = stmt
             .query_map(rusqlite::params![video_id], row_to_video)

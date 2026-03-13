@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Video, VideoFilter, AppSettings } from '../types';
 
@@ -10,11 +10,16 @@ export function useVideos() {
     const [allTags, setAllTags] = useState<string[]>([]);
     const [totalVideoCount, setTotalVideoCount] = useState(0);
     const [videoTypeCounts, setVideoTypeCounts] = useState<Record<string, number>>({});
+    const currentFilterRef = useRef<VideoFilter>({});
 
-    const fetchVideos = useCallback(async (filter: VideoFilter = {}) => {
+    const fetchVideos = useCallback(async (filter?: VideoFilter) => {
         setLoading(true);
+        const activeFilter = filter !== undefined ? filter : currentFilterRef.current;
+        if (filter !== undefined) {
+            currentFilterRef.current = filter;
+        }
         try {
-            const result = await invoke<Video[]>('get_videos', { filter });
+            const result = await invoke<Video[]>('get_videos', { filter: activeFilter });
             setVideos(result);
         } catch (err) {
             console.error('Failed to fetch videos:', err);
@@ -112,6 +117,17 @@ export function useVideos() {
             return summary;
         } catch (err) {
             console.error('Failed to translate summary:', err);
+            throw err;
+        }
+    }, [fetchVideos]);
+
+    const translateDescription = useCallback(async (videoId: number): Promise<string> => {
+        try {
+            const translated = await invoke<string>('translate_description', { videoId });
+            await fetchVideos();
+            return translated;
+        } catch (err) {
+            console.error('Failed to translate description:', err);
             throw err;
         }
     }, [fetchVideos]);
@@ -230,6 +246,7 @@ export function useVideos() {
         toggleWatched,
         summarizeVideo,
         translateSummary,
+        translateDescription,
         translateTimestamps,
         updateVideoTranscript,
         updateVideoTimestamps,

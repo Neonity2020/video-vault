@@ -39,6 +39,7 @@ export default function App() {
     toggleWatched,
     summarizeVideo,
     translateSummary,
+    translateDescription,
     translateTimestamps,
     updateVideoTranscript,
     updateVideoTimestamps,
@@ -61,6 +62,7 @@ export default function App() {
   const [formSaving, setFormSaving] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [translating, setTranslating] = useState(false);
+  const [translatingDescription, setTranslatingDescription] = useState(false);
   const [fetchingTranscript, setFetchingTranscript] = useState(false);
   const [savingTimestamps, setSavingTimestamps] = useState(false);
   const [translatingTimestamps, setTranslatingTimestamps] = useState(false);
@@ -214,6 +216,21 @@ export default function App() {
       showToast(err?.toString() || '翻译失败', 'error');
     } finally {
       setTranslating(false);
+    }
+  };
+
+  const handleTranslateDescription = async () => {
+    if (!selectedVideo?.id) return;
+    setTranslatingDescription(true);
+    try {
+      const originalEn = selectedVideo.description;
+      const translated = await translateDescription(selectedVideo.id);
+      setSelectedVideo((prev) => prev ? { ...prev, description: translated, description_en: originalEn } : null);
+      showToast('描述已翻译为中文');
+    } catch (err: any) {
+      showToast(err?.toString() || '翻译描述失败', 'error');
+    } finally {
+      setTranslatingDescription(false);
     }
   };
 
@@ -479,6 +496,7 @@ export default function App() {
           onDelete={handleDeleteVideo}
           onSummarize={handleSummarize}
           onTranslate={handleTranslate}
+          onTranslateDescription={handleTranslateDescription}
           onTranslateTimestamps={handleTranslateTimestamps}
           onToggleWatched={handleToggleWatched}
           onUpdateTranscript={handleUpdateTranscript}
@@ -490,6 +508,7 @@ export default function App() {
           generatingNote={generatingNote}
           summarizing={summarizing}
           translating={translating}
+          translatingDescription={translatingDescription}
           translatingTimestamps={translatingTimestamps}
           savingTranscript={fetchingTranscript}
           savingTimestamps={savingTimestamps}

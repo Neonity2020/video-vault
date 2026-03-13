@@ -8,6 +8,7 @@ export interface Video {
   author_url: string;
   topic: string;
   description: string;
+  description_en: string;
   duration: string;
   thumbnail: string;
   cover_path?: string;
@@ -50,6 +51,7 @@ export const DEFAULT_VIDEO: Video = {
   author_url: '',
   topic: '',
   description: '',
+  description_en: '',
   duration: '',
   thumbnail: '',
   ai_summary: '',

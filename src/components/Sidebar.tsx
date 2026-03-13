@@ -52,6 +52,20 @@ export default function Sidebar({
                         <span className="badge">{videoCount}</span>
                     </div>
                     <div
+                        className={`nav-item ${activeView === 'calendar' ? 'active' : ''}`}
+                        onClick={() => onNavigate('calendar')}
+                    >
+                        <span className="icon">📅</span>
+                        <span>学习日历</span>
+                    </div>
+                    <div
+                        className={`nav-item ${activeView === 'recycle-bin' ? 'active' : ''}`}
+                        onClick={() => onNavigate('recycle-bin')}
+                    >
+                        <span className="icon">🗑️</span>
+                        <span>回收站</span>
+                    </div>
+                    <div
                         className={`nav-item ${activeView === 'settings' ? 'active' : ''}`}
                         onClick={() => onNavigate('settings')}
                     >
