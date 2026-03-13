@@ -61,10 +61,10 @@ pub struct CalendarEvent {
     pub id: Option<i64>,
     pub title: String,
     pub description: String,
-    pub event_date: String,  // 格式: "YYYY-MM-DD"
-    pub event_time: String,  // 格式: "HH:MM"
+    pub event_date: String, // 格式: "YYYY-MM-DD"
+    pub event_time: String, // 格式: "HH:MM"
     pub duration_minutes: Option<i32>,
-    pub repeat_type: String, // "none", "daily", "weekly", "monthly"
+    pub repeat_type: String,          // "none", "daily", "weekly", "monthly"
     pub repeat_until: Option<String>, // 格式: "YYYY-MM-DD"
     pub reminder_minutes: Option<i64>,
     pub video_id: Option<i64>,
@@ -163,20 +163,11 @@ pub fn init_db(app_data_dir: &std::path::Path) -> Connection {
         [],
     );
     // Migration: add cover_path column for existing databases
-    let _ = conn.execute(
-        "ALTER TABLE videos ADD COLUMN cover_path TEXT",
-        [],
-    );
+    let _ = conn.execute("ALTER TABLE videos ADD COLUMN cover_path TEXT", []);
     // Migration: add deleted_at column for existing databases (recycle bin)
-    let _ = conn.execute(
-        "ALTER TABLE videos ADD COLUMN deleted_at TEXT",
-        [],
-    );
+    let _ = conn.execute("ALTER TABLE videos ADD COLUMN deleted_at TEXT", []);
     // Migration: add note_path column for Obsidian notes
-    let _ = conn.execute(
-        "ALTER TABLE videos ADD COLUMN note_path TEXT",
-        [],
-    );
+    let _ = conn.execute("ALTER TABLE videos ADD COLUMN note_path TEXT", []);
 
     // Create calendar_events table
     conn.execute_batch(

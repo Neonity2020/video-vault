@@ -1,7 +1,7 @@
 use crate::db::{AppSettings, CalendarEvent, DbState, Tag, Video, VideoFilter};
-use tauri::{Manager, State};
 use chrono::Datelike;
 use std::fs;
+use tauri::{Manager, State};
 
 fn row_to_video(row: &rusqlite::Row) -> rusqlite::Result<Video> {
     Ok(Video {
@@ -84,7 +84,11 @@ fn set_tags_for_video(
 }
 
 /// Download cover image from URL and save to local storage
-fn download_cover_image(app: &tauri::AppHandle, thumbnail_url: &str, video_id: Option<i64>) -> Result<String, String> {
+fn download_cover_image(
+    app: &tauri::AppHandle,
+    thumbnail_url: &str,
+    video_id: Option<i64>,
+) -> Result<String, String> {
     // Create covers directory in app data dir
     let app_data_dir = app
         .path()
@@ -144,7 +148,11 @@ fn delete_cover_image(app: &tauri::AppHandle, cover_path: &Option<String>) -> Re
 }
 
 #[tauri::command]
-pub fn add_video(state: State<DbState>, app: tauri::AppHandle, video: Video) -> Result<Video, String> {
+pub fn add_video(
+    state: State<DbState>,
+    app: tauri::AppHandle,
+    video: Video,
+) -> Result<Video, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     // Download cover image if thumbnail URL is provided
@@ -179,7 +187,11 @@ pub fn add_video(state: State<DbState>, app: tauri::AppHandle, video: Video) -> 
 }
 
 #[tauri::command]
-pub fn update_video(state: State<DbState>, app: tauri::AppHandle, video: Video) -> Result<(), String> {
+pub fn update_video(
+    state: State<DbState>,
+    app: tauri::AppHandle,
+    video: Video,
+) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     // Download new cover image if thumbnail changed
@@ -215,9 +227,11 @@ pub fn delete_video(state: State<DbState>, app: tauri::AppHandle, id: i64) -> Re
 
     // Get video info to delete cover image
     let cover_path: Option<String> = db
-        .query_row("SELECT cover_path FROM videos WHERE id = ?1", rusqlite::params![id], |row| {
-            row.get(0)
-        })
+        .query_row(
+            "SELECT cover_path FROM videos WHERE id = ?1",
+            rusqlite::params![id],
+            |row| row.get(0),
+        )
         .ok()
         .flatten();
 
@@ -246,14 +260,20 @@ pub fn restore_video(state: State<DbState>, id: i64) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn permanent_delete_video(state: State<DbState>, app: tauri::AppHandle, id: i64) -> Result<(), String> {
+pub fn permanent_delete_video(
+    state: State<DbState>,
+    app: tauri::AppHandle,
+    id: i64,
+) -> Result<(), String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     // Get video info to delete cover image
     let (cover_path, note_path): (Option<String>, Option<String>) = db
-        .query_row("SELECT cover_path, note_path FROM videos WHERE id = ?1", rusqlite::params![id], |row| {
-            Ok((row.get(0)?, row.get(1)?))
-        })
+        .query_row(
+            "SELECT cover_path, note_path FROM videos WHERE id = ?1",
+            rusqlite::params![id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
         .unwrap_or((None, None));
 
     // Permanently delete from database
@@ -295,7 +315,7 @@ pub fn empty_recycle_bin(state: State<DbState>, app: tauri::AppHandle) -> Result
     // Delete all cover images and note folders
     for (cover_path, note_path) in paths {
         let _ = delete_cover_image(&app, &cover_path);
-        
+
         if let Some(path) = note_path {
             if let Ok(app_data_dir) = app.path().app_data_dir() {
                 let notes_dir = app_data_dir.join("notes");
@@ -360,10 +380,10 @@ pub fn get_videos(state: State<DbState>, filter: VideoFilter) -> Result<Vec<Vide
     // Handle deleted videos filter
     if filter.include_deleted.unwrap_or(false) {
         // Show only deleted videos (recycle bin)
-        conditions.push(format!("v.deleted_at IS NOT NULL"));
+        conditions.push("v.deleted_at IS NOT NULL".to_string());
     } else {
         // Hide deleted videos by default
-        conditions.push(format!("v.deleted_at IS NULL"));
+        conditions.push("v.deleted_at IS NULL".to_string());
     }
 
     // Tag filtering: video must have ALL specified tags
@@ -708,7 +728,10 @@ pub async fn translate_summary(state: State<'_, DbState>, video_id: i64) -> Resu
 }
 
 #[tauri::command]
-pub async fn translate_description(state: State<'_, DbState>, video_id: i64) -> Result<String, String> {
+pub async fn translate_description(
+    state: State<'_, DbState>,
+    video_id: i64,
+) -> Result<String, String> {
     let video = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
         let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, description_en, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
@@ -776,7 +799,6 @@ pub async fn translate_description(state: State<'_, DbState>, video_id: i64) -> 
 
     Ok(translated)
 }
-
 
 #[tauri::command]
 pub async fn translate_timestamps(
@@ -1119,7 +1141,13 @@ pub async fn generate_ai_tags(
     // Parse the response into tags
     let tags: Vec<String> = response
         .split(',')
-        .map(|tag| tag.trim().trim_start_matches('#').trim_matches('"').trim().to_string())
+        .map(|tag| {
+            tag.trim()
+                .trim_start_matches('#')
+                .trim_matches('"')
+                .trim()
+                .to_string()
+        })
         .filter(|tag| !tag.is_empty() && tag.len() <= 30 && tag.len() >= 2)
         .collect();
 
@@ -1160,8 +1188,12 @@ fn event_occurs_on_date(event: &CalendarEvent, date: &str) -> bool {
         "daily" => {
             // Event occurs on date if date is on or after event_date and on or before repeat_until
             if let Ok(target_date) = chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d") {
-                if let Ok(event_start) = chrono::NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d") {
-                    let repeat_end = event.repeat_until.as_ref()
+                if let Ok(event_start) =
+                    chrono::NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d")
+                {
+                    let repeat_end = event
+                        .repeat_until
+                        .as_ref()
                         .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
                         .unwrap_or(target_date);
 
@@ -1176,9 +1208,11 @@ fn event_occurs_on_date(event: &CalendarEvent, date: &str) -> bool {
         "weekly" => {
             if let (Ok(target_date), Ok(event_start)) = (
                 chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d"),
-                chrono::NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d")
+                chrono::NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d"),
             ) {
-                let repeat_end = event.repeat_until.as_ref()
+                let repeat_end = event
+                    .repeat_until
+                    .as_ref()
                     .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
                     .unwrap_or(target_date);
 
@@ -1192,9 +1226,11 @@ fn event_occurs_on_date(event: &CalendarEvent, date: &str) -> bool {
         "monthly" => {
             if let (Ok(target_date), Ok(event_start)) = (
                 chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d"),
-                chrono::NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d")
+                chrono::NaiveDate::parse_from_str(&event.event_date, "%Y-%m-%d"),
             ) {
-                let repeat_end = event.repeat_until.as_ref()
+                let repeat_end = event
+                    .repeat_until
+                    .as_ref()
                     .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
                     .unwrap_or(target_date);
 
@@ -1209,7 +1245,10 @@ fn event_occurs_on_date(event: &CalendarEvent, date: &str) -> bool {
 }
 
 #[tauri::command]
-pub fn add_calendar_event(state: State<DbState>, event: CalendarEvent) -> Result<CalendarEvent, String> {
+pub fn add_calendar_event(
+    state: State<DbState>,
+    event: CalendarEvent,
+) -> Result<CalendarEvent, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     // Validate date format
@@ -1233,7 +1272,11 @@ pub fn add_calendar_event(state: State<DbState>, event: CalendarEvent) -> Result
 }
 
 #[tauri::command]
-pub fn get_calendar_events(state: State<DbState>, start_date: String, end_date: String) -> Result<Vec<CalendarEvent>, String> {
+pub fn get_calendar_events(
+    state: State<DbState>,
+    start_date: String,
+    end_date: String,
+) -> Result<Vec<CalendarEvent>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     let mut stmt = db.prepare(
@@ -1243,18 +1286,23 @@ pub fn get_calendar_events(state: State<DbState>, start_date: String, end_date: 
          ORDER BY event_date, event_time"
     ).map_err(|e| e.to_string())?;
 
-    let events = stmt.query_map(
-        rusqlite::params![start_date, end_date],
-        row_to_calendar_event
-    ).map_err(|e| e.to_string())?
-      .filter_map(|r| r.ok())
-      .collect();
+    let events = stmt
+        .query_map(
+            rusqlite::params![start_date, end_date],
+            row_to_calendar_event,
+        )
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
 
     Ok(events)
 }
 
 #[tauri::command]
-pub fn get_events_for_date(state: State<DbState>, date: String) -> Result<Vec<CalendarEvent>, String> {
+pub fn get_events_for_date(
+    state: State<DbState>,
+    date: String,
+) -> Result<Vec<CalendarEvent>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     // Get all events that could potentially occur on this date
@@ -1265,15 +1313,15 @@ pub fn get_events_for_date(state: State<DbState>, date: String) -> Result<Vec<Ca
          ORDER BY event_date, event_time"
     ).map_err(|e| e.to_string())?;
 
-    let all_events = stmt.query_map(
-        rusqlite::params![&date],
-        row_to_calendar_event
-    ).map_err(|e| e.to_string())?
-      .filter_map(|r| r.ok())
-      .collect::<Vec<_>>();
+    let all_events = stmt
+        .query_map(rusqlite::params![&date], row_to_calendar_event)
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect::<Vec<_>>();
 
     // Filter to only events that actually occur on this date
-    let events: Vec<_> = all_events.into_iter()
+    let events: Vec<_> = all_events
+        .into_iter()
         .filter(|e| event_occurs_on_date(e, &date))
         .collect();
 
@@ -1293,11 +1341,20 @@ pub fn update_calendar_event(state: State<DbState>, event: CalendarEvent) -> Res
                  updated_at=CURRENT_TIMESTAMP
              WHERE id=?11",
             rusqlite::params![
-                event.title, event.description, event.event_date, event.event_time,
-                event.duration_minutes, event.repeat_type, event.repeat_until,
-                event.reminder_minutes, event.video_id, event.completed, id,
+                event.title,
+                event.description,
+                event.event_date,
+                event.event_time,
+                event.duration_minutes,
+                event.repeat_type,
+                event.repeat_until,
+                event.reminder_minutes,
+                event.video_id,
+                event.completed,
+                id,
             ],
-        ).map_err(|e| format!("更新事件失败: {}", e))?;
+        )
+        .map_err(|e| format!("更新事件失败: {}", e))?;
     }
 
     Ok(())
@@ -1309,7 +1366,8 @@ pub fn delete_calendar_event(state: State<DbState>, id: i64) -> Result<(), Strin
     db.execute(
         "DELETE FROM calendar_events WHERE id = ?1",
         rusqlite::params![id],
-    ).map_err(|e| format!("删除事件失败: {}", e))?;
+    )
+    .map_err(|e| format!("删除事件失败: {}", e))?;
     Ok(())
 }
 
@@ -1317,19 +1375,22 @@ pub fn delete_calendar_event(state: State<DbState>, id: i64) -> Result<(), Strin
 pub fn is_video_in_calendar(state: State<DbState>, video_id: i64) -> Result<bool, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
-    let mut stmt = db.prepare(
-        "SELECT COUNT(*) as count FROM calendar_events WHERE video_id = ?1"
-    ).map_err(|e| format!("查询失败: {}", e))?;
+    let mut stmt = db
+        .prepare("SELECT COUNT(*) as count FROM calendar_events WHERE video_id = ?1")
+        .map_err(|e| format!("查询失败: {}", e))?;
 
-    let count: i64 = stmt.query_row(rusqlite::params![video_id], |row| {
-        row.get(0)
-    }).map_err(|e| format!("读取计数失败: {}", e))?;
+    let count: i64 = stmt
+        .query_row(rusqlite::params![video_id], |row| row.get(0))
+        .map_err(|e| format!("读取计数失败: {}", e))?;
 
     Ok(count > 0)
 }
 
 #[tauri::command]
-pub fn get_video_calendar_event(state: State<DbState>, video_id: i64) -> Result<Option<CalendarEvent>, String> {
+pub fn get_video_calendar_event(
+    state: State<DbState>,
+    video_id: i64,
+) -> Result<Option<CalendarEvent>, String> {
     let db = state.db.lock().map_err(|e| e.to_string())?;
 
     let mut stmt = db.prepare(
@@ -1340,23 +1401,25 @@ pub fn get_video_calendar_event(state: State<DbState>, video_id: i64) -> Result<
          LIMIT 1"
     ).map_err(|e| format!("查询失败: {}", e))?;
 
-    let event = stmt.query_row(rusqlite::params![video_id], |row| {
-        Ok(CalendarEvent {
-            id: Some(row.get(0)?),
-            title: row.get(1)?,
-            description: row.get(2)?,
-            event_date: row.get(3)?,
-            event_time: row.get(4)?,
-            duration_minutes: row.get(5)?,
-            repeat_type: row.get(6)?,
-            repeat_until: row.get(7)?,
-            reminder_minutes: row.get(8)?,
-            video_id: row.get(9)?,
-            completed: row.get(10)?,
-            created_at: Some(row.get(11)?),
-            updated_at: Some(row.get(12)?),
+    let event = stmt
+        .query_row(rusqlite::params![video_id], |row| {
+            Ok(CalendarEvent {
+                id: Some(row.get(0)?),
+                title: row.get(1)?,
+                description: row.get(2)?,
+                event_date: row.get(3)?,
+                event_time: row.get(4)?,
+                duration_minutes: row.get(5)?,
+                repeat_type: row.get(6)?,
+                repeat_until: row.get(7)?,
+                reminder_minutes: row.get(8)?,
+                video_id: row.get(9)?,
+                completed: row.get(10)?,
+                created_at: Some(row.get(11)?),
+                updated_at: Some(row.get(12)?),
+            })
         })
-    }).ok();
+        .ok();
 
     Ok(event)
 }
@@ -1369,7 +1432,9 @@ pub fn check_reminders(state: State<DbState>) -> Result<Vec<CalendarEvent>, Stri
     let current_time = now.format("%H:%M").to_string();
 
     // Get today and tomorrow's events
-    let tomorrow = (now + chrono::Duration::days(1)).format("%Y-%m-%d").to_string();
+    let tomorrow = (now + chrono::Duration::days(1))
+        .format("%Y-%m-%d")
+        .to_string();
 
     let mut stmt = db.prepare(
         "SELECT id, title, description, event_date, event_time, duration_minutes, repeat_type, repeat_until, reminder_minutes, video_id, completed, created_at, updated_at
@@ -1379,12 +1444,14 @@ pub fn check_reminders(state: State<DbState>) -> Result<Vec<CalendarEvent>, Stri
          AND completed = 0"
     ).map_err(|e| e.to_string())?;
 
-    let all_events = stmt.query_map(
-        rusqlite::params![&current_date, &tomorrow],
-        row_to_calendar_event
-    ).map_err(|e| e.to_string())?
-      .filter_map(|r| r.ok())
-      .collect::<Vec<_>>();
+    let all_events = stmt
+        .query_map(
+            rusqlite::params![&current_date, &tomorrow],
+            row_to_calendar_event,
+        )
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect::<Vec<_>>();
 
     // Filter events that need reminders
     let mut due_events = Vec::new();
@@ -1394,22 +1461,20 @@ pub fn check_reminders(state: State<DbState>) -> Result<Vec<CalendarEvent>, Stri
         }
 
         if let Some(reminder_minutes) = event.reminder_minutes {
-            if event.event_date == current_date {
-                if !event.event_time.is_empty() {
-                    if let (Ok(event_time), Ok(current_time_parsed)) = (
-                        chrono::NaiveTime::parse_from_str(&event.event_time, "%H:%M"),
-                        chrono::NaiveTime::parse_from_str(&current_time, "%H:%M")
-                    ) {
-                        let event_datetime = now.date_naive().and_time(event_time);
-                        let current_datetime = now.date_naive().and_time(current_time_parsed);
+            if event.event_date == current_date && !event.event_time.is_empty() {
+                if let (Ok(event_time), Ok(current_time_parsed)) = (
+                    chrono::NaiveTime::parse_from_str(&event.event_time, "%H:%M"),
+                    chrono::NaiveTime::parse_from_str(&current_time, "%H:%M"),
+                ) {
+                    let event_datetime = now.date_naive().and_time(event_time);
+                    let current_datetime = now.date_naive().and_time(current_time_parsed);
 
-                        let duration = event_datetime.signed_duration_since(current_datetime);
-                        let duration_minutes = duration.num_minutes();
+                    let duration = event_datetime.signed_duration_since(current_datetime);
+                    let duration_minutes = duration.num_minutes();
 
-                        // Trigger reminder if we're within the reminder window
-                        if duration_minutes <= reminder_minutes && duration_minutes > 0 {
-                            due_events.push(event);
-                        }
+                    // Trigger reminder if we're within the reminder window
+                    if duration_minutes <= reminder_minutes && duration_minutes > 0 {
+                        due_events.push(event);
                     }
                 }
             }
@@ -1447,8 +1512,14 @@ fn build_obsidian_note_fallback(video: &Video) -> String {
         "bilibili" => "Bilibili",
         _ => "本地视频",
     };
-    let watched = if video.is_watched != 0 { "true" } else { "false" };
-    let tags_yaml: String = video.tags.iter()
+    let watched = if video.is_watched != 0 {
+        "true"
+    } else {
+        "false"
+    };
+    let tags_yaml: String = video
+        .tags
+        .iter()
         .map(|t| format!("  - {}", t))
         .collect::<Vec<_>>()
         .join("\n");
@@ -1532,7 +1603,9 @@ updated: "{}"
     md.push_str("\n## 📝 个人笔记\n> 在此处添加你的个人笔记\n\n");
 
     if !video.tags.is_empty() {
-        let tags_line: String = video.tags.iter()
+        let tags_line: String = video
+            .tags
+            .iter()
             .map(|t| format!("#{}", t.replace(' ', "_")))
             .collect::<Vec<_>>()
             .join(" ");
@@ -1551,12 +1624,13 @@ pub async fn generate_obsidian_note(
     // 1. Load video data
     let video = {
         let db = state.db.lock().map_err(|e| e.to_string())?;
-        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
+        let mut stmt = db.prepare("SELECT id, title, video_type, file_path, url, author, author_url, topic, description, description_en, duration, thumbnail, cover_path, ai_summary, ai_summary_en, transcript, timestamps, note_path, rating, is_watched, deleted_at, created_at, updated_at FROM videos WHERE id = ?1")
             .map_err(|e| e.to_string())?;
         let mut rows = stmt
             .query_map(rusqlite::params![video_id], row_to_video)
             .map_err(|e| e.to_string())?;
-        let mut v = rows.next()
+        let mut v = rows
+            .next()
             .ok_or("Video not found".to_string())?
             .map_err(|e| e.to_string())?;
         v.tags = get_tags_for_video(&db, video_id);
@@ -1591,15 +1665,24 @@ pub async fn generate_obsidian_note(
     let url_str = video.url.as_deref().unwrap_or("");
     let file_path_str = video.file_path.as_deref().unwrap_or("");
     let tags_str = video.tags.join(", ");
-    let watched_str = if video.is_watched != 0 { "已观看" } else { "未观看" };
+    let watched_str = if video.is_watched != 0 {
+        "已观看"
+    } else {
+        "未观看"
+    };
     let now = chrono::Local::now().format("%Y-%m-%d").to_string();
 
     let markdown_content = if !settings.api_key.is_empty() {
         // Build a rich prompt for the AI
         let mut video_info = format!(
             "标题: {}\n作者: {}\n主题: {}\n类型: {}\n时长: {}\n评分: {}/5\n状态: {}\n",
-            video.title, video.author, video.topic, video.video_type,
-            video.duration, video.rating, watched_str
+            video.title,
+            video.author,
+            video.topic,
+            video.video_type,
+            video.duration,
+            video.rating,
+            watched_str
         );
         if !url_str.is_empty() {
             video_info.push_str(&format!("链接: {}\n", url_str));
@@ -1666,13 +1749,21 @@ pub async fn generate_obsidian_note(
                 // Strip markdown code fences if AI wrapped the output
                 let content = content.trim();
                 let content = if content.starts_with("```") {
-                    let content = content.strip_prefix("```markdown").or_else(|| content.strip_prefix("```md")).or_else(|| content.strip_prefix("```")).unwrap_or(content);
-                    content.strip_suffix("```").unwrap_or(content).trim().to_string()
+                    let content = content
+                        .strip_prefix("```markdown")
+                        .or_else(|| content.strip_prefix("```md"))
+                        .or_else(|| content.strip_prefix("```"))
+                        .unwrap_or(content);
+                    content
+                        .strip_suffix("```")
+                        .unwrap_or(content)
+                        .trim()
+                        .to_string()
                 } else {
                     content.to_string()
                 };
                 content
-            },
+            }
             Err(_) => {
                 // Fallback to template if AI fails
                 build_obsidian_note_fallback(&video)
@@ -1717,7 +1808,11 @@ pub async fn generate_obsidian_note(
 }
 
 #[tauri::command]
-pub fn open_notes_dir(app: tauri::AppHandle, _video_id: i64, note_path: String) -> Result<(), String> {
+pub fn open_notes_dir(
+    app: tauri::AppHandle,
+    _video_id: i64,
+    note_path: String,
+) -> Result<(), String> {
     let app_data_dir = app
         .path()
         .app_data_dir()
@@ -1760,4 +1855,3 @@ pub fn open_notes_dir(app: tauri::AppHandle, _video_id: i64, note_path: String) 
 
     Ok(())
 }
-
